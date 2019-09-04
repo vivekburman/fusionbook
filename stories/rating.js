@@ -1,419 +1,326 @@
+/* eslint-disable no-new */
 import { Story, notes, configs } from '../src/lib/story'
-import rating from '../components/html/rating'
+import RatingChart from '../components/html/rating'
 
 const ratingStory = new Story('Rating').addMetas([configs()])
 
 ratingStory.addChapter(
-  'vertical',
+  'Default undefined height, width, ratingFill, nonRatingFill, orientation, ratingStroke, nonRatingStroke',
   story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 0,
-      'stroke-width': 5
-    }
-    rating(args)
+    new RatingChart(story)
   },
   [
-    notes('This is the rating as it appears by default.')
+    notes('Default height = 400px, width = 400px, ratingFill = #ff0, nonRatingFill = #ddd, orientation = l2r, ratingStroke = nonRatingStroke = none')
   ]
 )
 ratingStory.addChapter(
-  'Check width and height garbage value',
+  'Height Proper Values(Number)',
   story => {
     let args = {
-      'container': story,
-      'height': 'abc',
-      'width': 'abc',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 0,
-      'stroke-width': 5
+      'height': 450
     }
-    rating(args)
+    new RatingChart(story, args)
   },
   [
-    notes('This is the rating as it appears by default.')
+    notes('Height will be set to 450px')
   ]
 )
 ratingStory.addChapter(
-  'Check width and height negative value',
+  'Height Proper Values(%)',
   story => {
     let args = {
-      'container': story,
-      'height': '-1',
-      'width': '-1',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 0,
-      'stroke-width': 5
+      'height': '124%'
     }
-    rating(args)
+    new RatingChart(story, args)
   },
   [
-    notes('This is the rating as it appears by default.')
+    notes('Height will be set to 124%')
   ]
 )
 ratingStory.addChapter(
-  'horizontal',
+  'Height Proper Values(px)',
   story => {
     let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 1,
-      'stroke-width': 5
+      'height': '340px'
     }
-    rating(args)
+    new RatingChart(story, args)
   },
   [
-    notes('This is the rating as it appears by default.')
+    notes('Height will be set to 340px')
+  ]
+)
+// fallback ???
+ratingStory.addChapter(
+  'Height Improper Value < 10px',
+  story => {
+    let args = {
+      'height': '4px'
+    }
+    new RatingChart(story, args)
+  },
+  [
+    notes('Height will be set to 400px, console an error')
   ]
 )
 ratingStory.addChapter(
-  'Variable number of stars is undefined',
+  'Width Proper Values(Number)',
   story => {
     let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 1,
-      'stroke-width': 5
+      'width': 470
     }
-    rating(args)
+    new RatingChart(story, args)
   },
   [
-    notes('Fallback to default 5')
-  ]
-)
-
-ratingStory.addChapter(
-  'Variable number of stars is not a valid number',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 1,
-      'stroke-width': 5
-    }
-    rating(args)
-  },
-  [
-    notes('Fallback to default and show warn message in console')
+    notes('Width will be set to 470px')
   ]
 )
 ratingStory.addChapter(
-  'Variable number of stars',
+  'Width Proper Values(%)',
   story => {
     let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 1,
-      'stroke-width': 5,
+      'width': '144%'
+    }
+    new RatingChart(story, args)
+  },
+  [
+    notes('Width will be set to 144%')
+  ]
+)
+ratingStory.addChapter(
+  'Width Proper Values(px)',
+  story => {
+    let args = {
+      'width': '405px'
+    }
+    new RatingChart(story, args)
+  },
+  [
+    notes('Width will be set to 405px')
+  ]
+)
+// fallback ???
+ratingStory.addChapter(
+  'Width Improper Value < 10px',
+  story => {
+    let args = {
+      'width': '-4px'
+    }
+    new RatingChart(story, args)
+  },
+  [
+    notes('Width will be set to 400px, console an error')
+  ]
+)
+ratingStory.addChapter(
+  'Accept all Fill possible Values',
+  story => {
+    let args = {
+      'ratingFill': 'black',
+      'nonRatingFill': 'green'
+    }
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'ratingFill': '#fcc' }), 2000)
+    setTimeout(() => a.update({ 'nonRatingFill': 'rgb(225, 150,100)' }), 2000)
+  },
+  [
+    notes('Values of hex and rgb is only checked, in case of similarity nonRating falls back to default')
+  ]
+)
+ratingStory.addChapter(
+  'Fill Improper Value',
+  story => {
+    let args = {
+      'ratingFill': 'black'
+    }
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'nonRatingFill': 'rg(100)' }), 2000)
+    setTimeout(() => a.update({ 'nonRatingFill': 'black' }), 2000)
+  },
+  [
+    notes('Values of hex and rgb is only checked, others are handled by browser, or should be handled by user')
+  ]
+)
+ratingStory.addChapter(
+  'Orientation',
+  story => {
+    let args = {
+      'orientation': 'r2l'
+    }
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'orientation': 't2b' }), 2000)
+    setTimeout(() => a.update({ 'orientation': 'b2t' }), 2000)
+    setTimeout(() => a.update({ 'orientation': 'gfr' }), 2000)
+  },
+  [
+    notes('4 cases \'l2r\', \'r2l\', \'t2b\', \'b2t\', in case of error, fallback to default and console an error')
+  ]
+)
+ratingStory.addChapter(
+  'Accept all Stroke possible Values',
+  story => {
+    let args = {
+      'ratingStroke': 'green',
+      'nonRatingStroke': 'black'
+    }
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'ratingStroke': '#cfc' }), 2000)
+    setTimeout(() => a.update({ 'nonRatingStroke': 'rgb(125,150,100)' }), 2000)
+  },
+  [
+    notes('Values of hex and rgb is only checked, in case of similarity nonRating falls back to default')
+  ]
+)
+ratingStory.addChapter(
+  'Stroke Improper Value',
+  story => {
+    let args = {
+      'ratingStroke': 'green'
+    }
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'nonRatingStroke': '10#0' }), 2000)
+    setTimeout(() => a.update({ 'nonRatingStroke': 'green' }), 2000)
+  },
+  [
+    notes('Values of hex and rgb is only checked, others are handled by browser, or should be handled by user')
+  ]
+)
+ratingStory.addChapter(
+  'strokeWidth',
+  story => {
+    let args = {
+      'strokeWidth': 2
+    }
+    new RatingChart(story, args)
+  },
+  [
+    notes('Render a strokeWidth of 2px')
+  ]
+)
+ratingStory.addChapter(
+  'strokeWidth Improper values',
+  story => {
+    let args = {
+      'strokeWidth': -20
+    }
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'strokeWidth': 'green' }), 2000)
+  },
+  [
+    notes('Render a strokeWidth calculated lower limit,console log an error')
+  ]
+)
+ratingStory.addChapter(
+  'Justify-content',
+  story => {
+    let args = {
+      'justify-content': 'center'
+    }
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'justify-content': 'start' }), 2000)
+    setTimeout(() => a.update({ 'justify-content': 'end' }), 2000)
+    setTimeout(() => a.update({ 'justify-content': 'strech' }), 2000)
+  },
+  [
+    notes('Render all possible states')
+  ]
+)
+ratingStory.addChapter(
+  'Justify-content improper value',
+  story => {
+    let args = {
+      'justify-content': 'ceneeter'
+    }
+    new RatingChart(story, args)
+  },
+  [
+    notes('Render default(center) and console an error')
+  ]
+)
+ratingStory.addChapter(
+  'Padding',
+  story => {
+    let args = {
+      'padding': 5
+    }
+    new RatingChart(story, args)
+  },
+  [
+    notes('Render padding of 5px')
+  ]
+)
+ratingStory.addChapter(
+  'Padding Improper Value',
+  story => {
+    let args = {
+      'padding': -2
+    }
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'padding': 'green' }), 2000)
+    setTimeout(() => a.update({ 'padding': 300 }), 2000)
+  },
+  [
+    notes('Render padding of 10% of side, console log an error')
+  ]
+)
+ratingStory.addChapter(
+  'Number of Stars',
+  story => {
+    let args = {
       'numberOfStars': 7
     }
-    rating(args)
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'numberOfStars': 9.7 }), 2000)
+    setTimeout(() => a.update({ 'numberOfStars': 'green' }), 2000)
+    setTimeout(() => a.update({ 'numberOfStars': -30 }), 2000)
   },
   [
-    notes('Fill color for rating is default')
+    notes('Render correctly 7 stars, 9 stars then fallback to 5, console log an error')
   ]
 )
 ratingStory.addChapter(
-  'Variable number of stars Vertical',
+  'Number of Stars',
   story => {
     let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 0,
-      'stroke-width': 5,
       'numberOfStars': 7
     }
-    rating(args)
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'numberOfStars': 9.7 }), 2000)
+    setTimeout(() => a.update({ 'numberOfStars': 'green' }), 2000)
+    setTimeout(() => a.update({ 'numberOfStars': -30 }), 2000)
+    setTimeout(() => a.update({ 'numberOfStars': 30 }), 2000)
   },
   [
-    notes('Display vertical')
+    notes('Render correctly 7 stars, 9 stars then fallback to 5, then throw an error and console log all errors')
   ]
 )
 ratingStory.addChapter(
-  'Variable number of stars Number of stars is not a integer',
+  'Rating',
   story => {
     let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 0,
-      'stroke-width': 5,
-      'numberOfStars': 7.777
+      'numberOfStars': 7,
+      'rating': 8
     }
-    rating(args)
+    new RatingChart(story, args)
   },
   [
-    notes('Display vertical')
+    notes('fallback to 100% rating, console log error')
   ]
 )
 ratingStory.addChapter(
-  'Fill color for rating is set to fill value',
+  'Rating',
   story => {
     let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 1,
-      'stroke-width': 5
+      'numberOfStars': 7,
+      'rating': 5
     }
-    rating(args)
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'rating': 5.712 }), 2000)
+    setTimeout(() => a.update({ 'rating': 'green' }), 2000)
+    setTimeout(() => a.update({ 'rating': -30 }), 2000)
+    setTimeout(() => a.update({ 'rating': 30 }), 2000)
   },
   [
-    notes('Fill color for rating is set to fill value')
+    notes('Render correctly 5/7 stars rating, 5.712/7, then fallback to 100% rating, console log all errors')
   ]
 )
-ratingStory.addChapter(
-  'Value for rating is whole number with user provided stars number',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'direction': 1,
-      'fill': 'red',
-      'stroke': 'blue',
-      'stroke-width': 5,
-      'post-rating-fill-color': 'green',
-      'rating': 3,
-      'numberOfStars': 7
-    }
-    rating(args)
-  },
-  [
-    notes('Fill color for rating is default, default is black n  white')
-  ]
-)
-ratingStory.addChapter(
-  'Value for rating is fractional number with user provided stars number rounding off',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'direction': 1,
-      'fill': 'red',
-      'stroke': 'blue',
-      'stroke-width': 5,
-      'post-rating-fill-color': 'green',
-      'rating': 3.333,
-      'numberOfStars': 7
-    }
-    rating(args)
-  },
-  [
-    notes('User provided rating with rounding off')
-  ]
-)
-ratingStory.addChapter(
-  'Value for rating is fractional number with user provided stars number 1 digit',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'direction': 1,
-      'fill': 'red',
-      'stroke': 'blue',
-      'stroke-width': 5,
-      'post-rating-fill-color': 'green',
-      'rating': 3.5,
-      'numberOfStars': 7
-    }
-    rating(args)
-  },
-  [
-    notes('User provided rating with 1 digit')
-  ]
-)
-ratingStory.addChapter(
-  'Fill color for rating is user defined',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 1,
-      'stroke-width': 5,
-      'pre-rating-fill-color': 'green',
-      'post-rating-fill-color': 'red'
-    }
-    rating(args)
-  },
-  [
-    notes('Fill color for rating is user defined')
-  ]
-)
-ratingStory.addChapter(
-  'Fill color for rating is user defined just one',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 1,
-      'stroke-width': 5,
-      'pre-rating-fill-color': 'green'
-    }
-    rating(args)
-  },
-  [
-    notes('Fill color for rating is default')
-  ]
-)
-ratingStory.addChapter(
-  'Fill color for rating is user defined just one',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'fill': 'red',
-      'stroke': 'blue',
-      'direction': 1,
-      'stroke-width': 5,
-      'post-rating-fill-color': 'green'
-    }
-    rating(args)
-  },
-  [
-    notes('Fill color for rating is default')
-  ]
-)
-ratingStory.addChapter(
-  'Stroke color for rating is user defined just one',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'direction': 1,
-      'fill': 'red',
-      'stroke': 'blue',
-      'stroke-width': 5,
-      'post-rating-fill-color': 'green',
-      'post-stroke-color': 'aqua'
-    }
-    rating(args)
-  },
-  [
-    notes('Stroke color for rating is default')
-  ]
-)
-ratingStory.addChapter(
-  'Stroke color for rating is user defined just one',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'direction': 1,
-      'fill': 'red',
-      'stroke': 'blue',
-      'stroke-width': 5,
-      'post-rating-fill-color': 'green',
-      'pre-stroke-color': 'orange'
-    }
-    rating(args)
-  },
-  [
-    notes('Stroke color for rating is default')
-  ]
-)
-ratingStory.addChapter(
-  'Stroke color for rating is user defined',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'direction': 1,
-      'fill': 'red',
-      'stroke': 'blue',
-      'stroke-width': 5,
-      'post-rating-fill-color': 'green',
-      'pre-stroke-color': 'orange',
-      'post-stroke-color': 'brown'
-    }
-    rating(args)
-  },
-  [
-    notes('Stroke color for rating is default')
-  ]
-)
-ratingStory.addChapter(
-  'Value for rating is whole number with default 5 stars',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'direction': 1,
-      'fill': 'red',
-      'stroke': 'blue',
-      'stroke-width': 5,
-      'post-rating-fill-color': 'green',
-      'pre-stroke-color': 'orange',
-      'post-stroke-color': 'brown',
-      'rating': 3
-    }
-    rating(args)
-  },
-  [
-    notes('Fill color for rating is default')
-  ]
-)
-ratingStory.addChapter(
-  'Combining all',
-  story => {
-    let args = {
-      'container': story,
-      'height': '700px',
-      'width': '700px',
-      'direction': 1,
-      'fill': 'red',
-      'stroke': 'blue',
-      'stroke-width': 5,
-      'pre-rating-fill-color': 'red',
-      'post-rating-fill-color': 'green',
-      'pre-stroke-color': 'orange',
-      'post-stroke-color': 'brown',
-      'rating': 3.34,
-      'numberOfStars': 10
-    }
-    rating(args)
-  },
-  [
-    notes('Fill color for rating is default')
-  ]
-)
-
 export default ratingStory
