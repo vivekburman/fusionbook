@@ -5,16 +5,16 @@ import RatingChart from '../components/html/rating'
 const ratingStory = new Story('Rating').addMetas([configs()])
 
 ratingStory.addChapter(
-  'Default undefined height, width, ratingFill, nonRatingFill, orientation, ratingStroke, nonRatingStroke',
+  'Default undefined height, width, ratedFill, nonRatedFill, orientation, ratedStroke, nonRatedStroke',
   story => {
     new RatingChart(story)
   },
   [
-    notes('Default height = 400px, width = 400px, ratingFill = #ff0, nonRatingFill = #ddd, orientation = l2r, ratingStroke = nonRatingStroke = none')
+    notes('Default height = 400px, width = 400px, ratedFill = #ff0, nonRatedFill = #ddd, orientation = l2r, ratedStroke = nonRatedStroke = none')
   ]
 )
 ratingStory.addChapter(
-  'Height Proper Values(Number)',
+  'Height Proper Values(Number) 450',
   story => {
     let args = {
       'height': 450
@@ -26,7 +26,7 @@ ratingStory.addChapter(
   ]
 )
 ratingStory.addChapter(
-  'Height Proper Values(%)',
+  'Height Proper Values(%) 124%',
   story => {
     let args = {
       'height': '124%'
@@ -38,7 +38,7 @@ ratingStory.addChapter(
   ]
 )
 ratingStory.addChapter(
-  'Height Proper Values(px)',
+  'Height Proper Values(px) 340px',
   story => {
     let args = {
       'height': '340px'
@@ -122,36 +122,38 @@ ratingStory.addChapter(
     setTimeout(() => a.update({ 'height': '100px' }), 2000)
   },
   [
-    notes('Width will be set to 400px, console an error')
+    notes('Height = 400px, width = 200px,:: height = 400px width: 333px :: height = 400px, width = 900px :: height = 100px, width= 900px')
   ]
 )
 ratingStory.addChapter(
   'Accept all Fill possible Values',
   story => {
     let args = {
-      'ratingFill': 'black',
-      'nonRatingFill': 'green'
+      'ratedFill': 'black',
+      'nonRatedFill': 'green',
+      'rating': 2
     }
     let a = new RatingChart(story, args)
-    setTimeout(() => a.update({ 'ratingFill': '#cff' }), 2000)
-    setTimeout(() => a.update({ 'ratingFill': 'rgb(225,150,100)' }), 4000)
+    setTimeout(() => a.update({ 'ratedFill': '#cff' }), 2000)
+    setTimeout(() => a.update({ 'ratedFill': 'rgb(225,150,100)' }), 4000)
+    setTimeout(() => a.update({ 'nonRatedFill': 'red' }), 6000)
   },
   [
-    notes('Values of hex and rgb is only checked, in case of similarity nonRating falls back to default')
+    notes('ratedFill: black, nonRatedFill: green => ratedFill: #cff => ratedFill: rgb(255,150,100) => nonRatedFill: red')
   ]
 )
 ratingStory.addChapter(
   'Fill Improper Value',
   story => {
     let args = {
-      'ratingFill': 'black'
+      'ratedFill': 'rgb(11)'
     }
     let a = new RatingChart(story, args)
-    setTimeout(() => a.update({ 'nonRatingFill': 'rg(100)' }), 2000)
-    setTimeout(() => a.update({ 'nonRatingFill': 'black' }), 2000)
+    setTimeout(() => a.update({ 'ratedFill': 'blue' }), 1000)
+    setTimeout(() => a.update({ 'ratedFill': 'green' }), 2000)
   },
   [
-    notes('Values of hex and rgb is only checked, others are handled by browser, or should be handled by user')
+    notes('ratedFill: rgb(11)(#ff0)  => blue => green')
   ]
 )
 ratingStory.addChapter(
@@ -161,12 +163,12 @@ ratingStory.addChapter(
       'orientation': 'r2l'
     }
     let a = new RatingChart(story, args)
-    setTimeout(() => a.update({ 'orientation': 't2b' }), 2000)
+    setTimeout(() => a.update({ 'orientation': 't2b' }), 1000)
     setTimeout(() => a.update({ 'orientation': 'b2t' }), 2000)
-    setTimeout(() => a.update({ 'orientation': 'gfr' }), 2000)
+    setTimeout(() => a.update({ 'orientation': 'gfr' }), 3000)
   },
   [
-    notes('4 cases \'l2r\', \'r2l\', \'t2b\', \'b2t\', in case of error, fallback to default and console an error')
+    notes('orientation => r2l => t2b => b2t => b2t, gfr is error')
   ]
 )
 
@@ -175,14 +177,15 @@ ratingStory.addChapter(
   story => {
     let args = {
       'strokeWidth': 2,
-      'ratingStroke': 'green'
+      'ratedStroke': 'green'
     }
     let a = new RatingChart(story, args)
-    setTimeout(() => a.update({ 'ratingStroke': '#cff' }), 2000)
-    setTimeout(() => a.update({ 'ratingStroke': 'rgb(233,122,231)' }), 4000)
+    setTimeout(() => a.update({ 'ratedStroke': '#cff' }), 1000)
+    setTimeout(() => a.update({ 'ratedStroke': 'rgb(233,122,231)' }), 2000)
+    setTimeout(() => a.update({ 'nonRatedStroke': 'blue', 'rating': 3 }), 1000)
   },
   [
-    notes('Values of hex and rgb is only checked, in case of similarity nonRating falls back to default')
+    notes('ratedStroke => green => #cff => rgb(233,122,231), nonRatedStroke => blue, rating => 3')
   ]
 )
 ratingStory.addChapter(
@@ -190,14 +193,14 @@ ratingStory.addChapter(
   story => {
     let args = {
       'strokeWidth': 2,
-      'ratingStroke': 'green'
+      'ratedStroke': 'green'
     }
     let a = new RatingChart(story, args)
-    setTimeout(() => a.update({ 'nonRatingStroke': '10#0' }), 2000)
-    setTimeout(() => a.update({ 'nonRatingStroke': 'green' }), 2000)
+    setTimeout(() => a.update({ 'ratedStroke': '10#0' }), 1000)
+    setTimeout(() => a.update({ 'ratedStroke': 'red' }), 2000)
   },
   [
-    notes('Values of hex and rgb is only checked, others are handled by browser, or should be handled by user')
+    notes('ratedStroke=> green => 10#0(green) => red')
   ]
 )
 ratingStory.addChapter(
@@ -205,13 +208,13 @@ ratingStory.addChapter(
   story => {
     let args = {
       'strokeWidth': 1,
-      'ratingStroke': 'red'
+      'ratedStroke': 'red'
     }
     let a = new RatingChart(story, args)
-    setTimeout(() => { a.update({ 'strokeWidth': 2 }) }, 2000)
+    setTimeout(() => { a.update({ 'strokeWidth': 10 }) }, 1000)
   },
   [
-    notes('Render a strokeWidth of 2px')
+    notes('strokeWidth => 1 => 2')
   ]
 )
 ratingStory.addChapter(
@@ -221,10 +224,10 @@ ratingStory.addChapter(
       'strokeWidth': -20
     }
     let a = new RatingChart(story, args)
-    setTimeout(() => a.update({ 'strokeWidth': 'green' }), 2000)
+    setTimeout(() => a.update({ 'strokeWidth': 'green' }), 1000)
   },
   [
-    notes('Render a strokeWidth calculated lower limit,console log an error')
+    notes('strokeWidth: -20 (0) => green(0)')
   ]
 )
 ratingStory.addChapter(
@@ -238,12 +241,12 @@ ratingStory.addChapter(
     }
     let a = new RatingChart(story, args)
     setTimeout(() => a.update({ 'justifyContent': 'start' }), 2000)
-    setTimeout(() => a.update({ 'justifyContent': 'end', 'alignItem': 'end' }), 4000)
-    setTimeout(() => a.update({ 'justifyContent': 'space-evenly' }), 6000)
-    setTimeout(() => a.update({ 'orientation': 't2b', 'alignItem': 'center' }), 8000)
+    setTimeout(() => a.update({ 'justifyContent': 'end', 'alignItem': 'end', 'height': 300 }), 3000)
+    setTimeout(() => a.update({ 'justifyContent': 'space-evenly', 'height': 100 }), 4000)
+    setTimeout(() => a.update({ 'orientation': 't2b', 'alignItem': 'center', 'height': 300 }), 5000)
   },
   [
-    notes('Render all meaningful possible states')
+    notes('justify: center => start => end => space-evenly, orientation => t2b alignItem => center')
   ]
 )
 ratingStory.addChapter(
@@ -251,12 +254,12 @@ ratingStory.addChapter(
   story => {
     let args = {
       'justifyContent': 'ceneeter',
-      'alignContent': 'starrrrt'
+      'alignItem': 'starrrrt'
     }
     new RatingChart(story, args)
   },
   [
-    notes('Render default(center) and console an error')
+    notes('justifyContent: ceneteer(center) alignItem: starrrt (center)')
   ]
 )
 ratingStory.addChapter(
@@ -279,10 +282,11 @@ ratingStory.addChapter(
     }
     let a = new RatingChart(story, args)
     setTimeout(() => a.update({ 'padding': 'green' }), 2000)
+    setTimeout(() => a.update({ 'padding': 4 }), 3000)
     setTimeout(() => a.update({ 'padding': 300 }), 4000)
   },
   [
-    notes('Render padding of 10% of side, console log an error')
+    notes('Padding: -2 (1) => green(1) => 4 => 300(4)')
   ]
 )
 ratingStory.addChapter(
@@ -292,11 +296,11 @@ ratingStory.addChapter(
       'numberOfStars': 7
     }
     let a = new RatingChart(story, args)
-    setTimeout(() => a.update({ 'numberOfStars': 9.7 }), 2000)
-    setTimeout(() => a.update({ 'numberOfStars': 'green' }), 2000)
+    setTimeout(() => a.update({ 'numberOfStars': 9 }), 2000)
+    setTimeout(() => a.update({ 'numberOfStars': 400 }), 3000)
   },
   [
-    notes('Render correctly 7 stars, 9 stars.')
+    notes('numberOfStars: 7 => 9 => 400(9)')
   ]
 )
 
@@ -314,7 +318,7 @@ ratingStory.addChapter(
     setTimeout(() => a.update({ 'rating': 30 }), 4000)
   },
   [
-    notes('Render correctly 5/7 stars rating, 5.712/7, then fallback to 100% rating, console log all errors')
+    notes('rating => 5/7 => 5.712/7 => green(5.712) => -30(5.712) => 30 (5.712)')
   ]
 )
 ratingStory.addChapter(
@@ -327,7 +331,7 @@ ratingStory.addChapter(
     }
     let a = new RatingChart(story, args)
     setTimeout(() => a.update({ 'rating': 5.71, 'orientation': 'r2l' }), 2000)
-    setTimeout(() => a.update({ 'orientation': 'l2r', 'numberOfStars': 4 }), 6000)
+    setTimeout(() => a.update({ 'orientation': 'l2r', 'numberOfStars': 4 }), 4000)
   },
   [
     notes('Render correctly 7/5, 7/5.71, then fallback to undefined')
@@ -346,6 +350,26 @@ ratingStory.addChapter(
   },
   [
     notes('Configuration is not possible')
+  ]
+)
+ratingStory.addChapter(
+  'Change in number of stars',
+  story => {
+    let args = {
+      'width': 200,
+      'height': 200,
+      'numberOfStars': 7,
+      'rating': 5
+    }
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'numberOfStars': 10 }), 1000)
+    setTimeout(() => a.update({ 'numberOfStars': 20 }), 2000)
+    setTimeout(() => a.update({ 'numberOfStars': 5 }), 3000)
+    setTimeout(() => a.update({ 'numberOfStars': 2 }), 4000)
+    setTimeout(() => a.update({ 'numberOfStars': 6 }), 5000)
+  },
+  [
+    notes('numberOfStars => 7 => 10 => 20 => 5 => 2 => 6')
   ]
 )
 export default ratingStory
