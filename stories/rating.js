@@ -417,4 +417,26 @@ ratingStory.addChapter(
     notes('onUpdate and onDraw will be called after 1s')
   ]
 )
+ratingStory.addChapter(
+  'Rating value passed from server',
+  story => {
+    let a = new RatingChart(story)
+    setTimeout(() => {
+      a.onUpdate = function () {
+        console.log('Calling from onUpdate Method')
+      }
+      a.onDraw = function () {
+        console.log('Calling from onDraw method')
+      }
+      a.update({ 'ratingFill': 'green' })
+    }, 0)
+    let rating = new EventSource('http://localhost:3000/rating')
+    rating.onmessage = function (event) {
+      a.update({ 'rating': +event.data })
+    }
+  },
+  [
+    notes('onUpdate and onDraw will be called after 1s')
+  ]
+)
 export default ratingStory
