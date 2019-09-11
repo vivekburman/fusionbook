@@ -25,18 +25,18 @@ ratingStory.addChapter(
     notes('Height will be set to 450px')
   ]
 )
-ratingStory.addChapter(
-  'Height Proper Values(%) 124%',
-  story => {
-    let args = {
-      'height': '124%'
-    }
-    new RatingChart(story, args)
-  },
-  [
-    notes('Height will be set to 124%')
-  ]
-)
+// ratingStory.addChapter(
+//   'Height Proper Values(%) 124%',
+//   story => {
+//     let args = {
+//       'height': '124%'
+//     }
+//     new RatingChart(story, args)
+//   },
+//   [
+//     notes('Height will be set to 124%')
+//   ]
+// )
 ratingStory.addChapter(
   'Height Proper Values(px) 340px',
   story => {
@@ -74,18 +74,18 @@ ratingStory.addChapter(
     notes('Width will be set to 470px')
   ]
 )
-ratingStory.addChapter(
-  'Width Proper Values(%)',
-  story => {
-    let args = {
-      'width': '144%'
-    }
-    new RatingChart(story, args)
-  },
-  [
-    notes('Width will be set to 144%')
-  ]
-)
+// ratingStory.addChapter(
+//   'Width Proper Values(%)',
+//   story => {
+//     let args = {
+//       'width': '144%'
+//     }
+//     new RatingChart(story, args)
+//   },
+//   [
+//     notes('Width will be set to 144%')
+//   ]
+// )
 ratingStory.addChapter(
   'Width Proper Values(px)',
   story => {
@@ -211,7 +211,7 @@ ratingStory.addChapter(
       'ratedStroke': 'red'
     }
     let a = new RatingChart(story, args)
-    setTimeout(() => { a.update({ 'strokeWidth': 10 }) }, 1000)
+    setTimeout(() => { a.update({ 'strokeWidth': 4 }) }, 1000)
   },
   [
     notes('strokeWidth => 1 => 2')
@@ -241,8 +241,8 @@ ratingStory.addChapter(
     }
     let a = new RatingChart(story, args)
     setTimeout(() => a.update({ 'justifyContent': 'start' }), 2000)
-    setTimeout(() => a.update({ 'justifyContent': 'end', 'alignItem': 'end', 'height': 300 }), 3000)
-    setTimeout(() => a.update({ 'justifyContent': 'space-evenly', 'height': 100 }), 4000)
+    setTimeout(() => a.update({ 'justifyContent': 'end', 'alignItem': 'end' }), 3000)
+    setTimeout(() => a.update({ 'justifyContent': 'space-evenly' }), 4000)
     setTimeout(() => a.update({ 'orientation': 't2b', 'alignItem': 'center', 'height': 300 }), 5000)
   },
   [
@@ -268,10 +268,11 @@ ratingStory.addChapter(
     let args = {
       'padding': 5
     }
-    new RatingChart(story, args)
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'padding': 2 }), 1000)
   },
   [
-    notes('Render padding of 5px')
+    notes('Render padding of 5px => 2px')
   ]
 )
 ratingStory.addChapter(
@@ -353,7 +354,7 @@ ratingStory.addChapter(
   ]
 )
 ratingStory.addChapter(
-  'Change in number of stars',
+  'Change in number of stars and rating',
   story => {
     let args = {
       'width': 200,
@@ -370,6 +371,50 @@ ratingStory.addChapter(
   },
   [
     notes('numberOfStars => 7 => 10 => 20 => 5 => 2 => 6')
+  ]
+)
+ratingStory.addChapter(
+  'Stress Test',
+  story => {
+    let args = {
+      'width': 400,
+      'height': 400,
+      'numberOfStars': 7,
+      'rating': 5
+    }
+    let a = new RatingChart(story, args)
+    let startTime = new Date() * 1
+    let currTime = 0
+    let count = 0
+    while (currTime <= 100) {
+      let i = Math.floor(Math.random() * 10)
+      let numberOfStars = (7 + i) % 10
+      count += 1
+      setTimeout(() => a.update({ 'numberOfStars': numberOfStars }), 0)
+      currTime = (new Date() * 1) - startTime
+    }
+    console.log(count)
+  },
+  [
+    notes('numberOfStars is a random value between 1 and 10')
+  ]
+)
+ratingStory.addChapter(
+  'User provided methods',
+  story => {
+    let a = new RatingChart(story)
+    setTimeout(() => {
+      a.onUpdate = function () {
+        console.log('Calling from onUpdate Method')
+      }
+      a.onDraw = function () {
+        console.log('Calling from onDraw method')
+      }
+      a.update({ 'ratingFill': 'green' })
+    }, 1000)
+  },
+  [
+    notes('onUpdate and onDraw will be called after 1s')
   ]
 )
 export default ratingStory

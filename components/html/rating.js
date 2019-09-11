@@ -6,13 +6,74 @@ function checkColorCode (str) {
   }
   return true
 }
+function checkConfig (height, width, numberOfStars, orientation, padding, strokeWidth) {
+  let block
+  if (orientation === 'l2r' || orientation === 'r2l') {
+    block = Math.min(height, width / numberOfStars)
+  } else {
+    block = Math.min(width, height / numberOfStars)
+  }
+  if (block * 0.1 < padding) {
+    console.error('Configuration not possible as Padding cannot be greater than 10% of blockSize')
+    return false
+  }
+  if (block * 0.1 < strokeWidth) {
+    console.error('Configuration not possible as StrokeWidth cannot be greater than 10% of blockSize')
+    return false
+  }
+  if ((block - 2 * (padding + strokeWidth)) / block < 0.2) {
+    console.log('Configuration not possible as Content area should be atleast 20% of available space')
+    return false
+  }
+  return true
+}
+function checkSideValue (val) {
+  if (typeof val === 'number' && val > 10) {
+    return val
+  } else if (typeof val === 'string' && val.endsWith('px')) {
+    let v
+    v = val.substr(0, val.indexOf('px'))
+    if (v > 10) {
+      return v
+    }
+  }
+  return -1
+}
+function createDOMNode (nodeName, args = []) {
+  const xlmnsSvg = 'http://www.w3.org/2000/svg'
+  const node = document.createElementNS(xlmnsSvg, nodeName)
+  for (let property in args) {
+    node.setAttribute(property, args[property])
+  }
+  return node
+}
+function calculateJustify (justify, side, blockSize, numberOfStars) {
+  if (justify === 'start') {
+    return 0
+  } else if (justify === 'end') {
+    return side - blockSize * numberOfStars
+  } else if (justify === 'center') {
+    return (side - blockSize * numberOfStars) / 2
+  } else if (justify === 'space-evenly') {
+    return (side - blockSize * numberOfStars) / (2 * numberOfStars)
+  }
+}
+function calculateAlign (align, side, blockSize) {
+  if (align === 'start') {
+    return 0
+  } else if (align === 'end') {
+    return side - blockSize
+  } else if (align === 'center') {
+    return (side - blockSize) / 2
+  }
+}
 export default class RatingChart {
   constructor (container, args) {
     if (!(container instanceof HTMLElement)) {
       console.error('Container is not a valid HTML element')
       return null
     }
-    this.config = {
+    this._config = {
       height: 400,
       width: 400,
       justifyContent: 'center',
@@ -27,41 +88,35 @@ export default class RatingChart {
       ratedStroke: 'none',
       nonRatedStroke: 'none',
       container: container,
-      svg: this._createDOMNode('svg'),
+      svg: createDOMNode('svg'),
       stars: [],
-      structuralStatus: {
-        'height': 1,
-        'width': 1,
-        'numberOfStars': 1,
-        'padding': 1,
-        'strokeWidth': 1,
-        'justifyContent': 1,
-        'alignItem': 1
-      }
+      animationFrameActive: true
     }
-    this.config.container.appendChild(this.config.svg)
+    this._config.container.appendChild(this._config.svg)
     this._createGradient()
-    if (!args) {
-      this._draw()
-    } else {
-      if (this._validate(args)) {
-        this._draw()
-      } else {
-        console.error('Configuration is not possible')
+    this._createAndUpdate(args)
+  }
+  _createAndUpdate (args) {
+    if (!args || (args && this._validateAndSet(args))) {
+      if (this._config.animationFrameActive) {
+        this._config.animationFrameActive = false
+        requestAnimationFrame(() => {
+          this._draw()
+          this._config.animationFrameActive = true
+        })
       }
     }
   }
   update (args) {
     if (args) {
-      if (this._validate(args)) {
-        this._draw()
-      } else {
-        console.error('Configuration is not possible')
-      }
+      this._createAndUpdate(args)
+    }
+    if (typeof this.onUpdate === 'function') {
+      this.onUpdate()
     }
   }
   _createGradient () {
-    const defs = this._createDOMNode('defs')
+    const defs = createDOMNode('defs')
     let args = {
       'id': 'gradient-fill',
       'x1': '0%',
@@ -70,7 +125,7 @@ export default class RatingChart {
       'y2': '0%'
     }
 
-    const gradientFill = this._createDOMNode('linearGradient', args)
+    const gradientFill = createDOMNode('linearGradient', args)
     args = {
       'id': 'gradient-stroke',
       'x1': '0%',
@@ -78,411 +133,246 @@ export default class RatingChart {
       'y1': '0%',
       'y2': '0%'
     }
-    const gradientStroke = this._createDOMNode('linearGradient', args)
+    const gradientStroke = createDOMNode('linearGradient', args)
     args = {
       'offset': '0%',
-      'stop-color': this.config.ratedFill,
+      'stop-color': this._config.ratedFill,
       'id': 'rated-fill'
     }
-    let stop = this._createDOMNode('stop', args)
-    this.config.gradientRatedFill = stop
+    let stop = createDOMNode('stop', args)
     gradientFill.appendChild(stop)
     args = {
       'offset': '0%',
-      'stop-color': this.config.nonRatedFill,
+      'stop-color': this._config.nonRatedFill,
       'id': 'non-rated-fill'
     }
-    stop = this._createDOMNode('stop', args)
-    this.config.gradientNonRatedFill = stop
+    stop = createDOMNode('stop', args)
     gradientFill.appendChild(stop)
     // end of fill
     args = {
       'offset': '0%',
-      'stop-color': this.config.ratedStroke,
+      'stop-color': this._config.ratedStroke,
       'id': 'rated-stroke'
     }
-    stop = this._createDOMNode('stop', args)
-    this.config.gradientRatedStroke = stop
+    stop = createDOMNode('stop', args)
     gradientStroke.appendChild(stop)
     args = {
       'offset': '0%',
-      'stop-color': this.config.nonRatedStroke,
+      'stop-color': this._config.nonRatedStroke,
       'id': 'non-rated-stroke'
     }
-    stop = this._createDOMNode('stop', args)
-    this.config.gradientNonRatedStroke = stop
+    stop = createDOMNode('stop', args)
     gradientStroke.appendChild(stop)
     defs.appendChild(gradientFill)
     defs.appendChild(gradientStroke)
-    this.config.svg.appendChild(defs)
+    this._config.svg.appendChild(defs)
   }
-  _checkSideValue (val, side) {
-    if (typeof val === 'number' && val > 10) {
-      return val
-    } else if (typeof val === 'string') {
-      let v
-      if (val.endsWith('px')) {
-        v = val.substr(0, val.indexOf('px'))
-        if (v > 10) {
-          return v
-        }
-      } else if (val.endsWith('%')) {
-        v = val.substr(0, val.indexOf('%'))
-        let parentSide
-        if (side === 'width') {
-          parentSide = this.config.container.clientWidth
-        } else {
-          parentSide = this.config.container.clientHeight
-        }
-        let toPixels = parentSide * v / 100
-        if (toPixels > 10) {
-          return toPixels
-        }
-      }
-    }
-    return -1
-  }
-  _validate (args) {
+  _validateAndSet (args) {
     let validJustifyContents = ['start', 'end', 'center', 'space-evenly']
     let validAlignItems = ['start', 'end', 'center']
     let validOrientation = ['l2r', 'r2l', 't2b', 'b2t']
-    let height
-    let width
-    let justifyContent
-    let alignItem
-    let padding
-    let strokeWidth
-    let orientation
-    let numberOfStars
-    let rating
-    let ratedFill
-    let nonRatedFill
-    let ratedStroke
-    let nonRatedStroke
 
     if (args.height) {
-      let val = this._checkSideValue(args.height, 'height')
+      let val = checkSideValue(args.height)
       if (val !== -1) {
-        height = val
+        args.height = val
       } else {
-        height = this.config.height
+        args.height = this._config.height
         console.error('Height value is inappropriate')
       }
     } else {
-      height = this.config.height
+      args.height = this._config.height
     }
 
     if (args.width) {
-      let val = this._checkSideValue(args.width, 'width')
+      let val = checkSideValue(args.width)
       if (val !== -1) {
-        width = val
+        args.width = val
       } else {
-        width = this.config.width
+        args.width = this._config.width
         console.error('Width value is inappropriate')
       }
     } else {
-      width = this.config.width
+      args.width = this._config.width
+    }
+    if (args.justifyContent && (typeof args.justifyContent !== 'string' ||
+        !validJustifyContents.includes(args.justifyContent.toLowerCase()))) {
+      args.justifyContent = this._config.justifyContent
+      console.error('JustifyContent value is inappropriate')
+    } else if (!args.justifyContent) {
+      args.justifyContent = this._config.justifyContent
     }
 
-    if (args.justifyContent) {
-      if (typeof args.justifyContent === 'string' && validJustifyContents.includes(args.justifyContent.toLowerCase())) {
-        justifyContent = args.justifyContent
-      } else {
-        justifyContent = this.config.justifyContent
-        console.error('JustifyContent value is inappropriate')
-      }
-    } else {
-      justifyContent = this.config.justifyContent
+    if (args.alignItem && (typeof args.alignItem !== 'string' ||
+        !validAlignItems.includes(args.alignItem.toLowerCase()))) {
+      args.alignItem = this._config.alignItem
+      console.error('Align Item value is inappropriate')
+    } else if (!args.alignItem) {
+      args.alignItem = this._config.alignItem
     }
 
-    if (args.alignItem) {
-      if (typeof args.alignItem === 'string' &&
-      validAlignItems.includes(args.alignItem.toLowerCase())) {
-        alignItem = args.alignItem
-      } else {
-        alignItem = this.config.alignItem
-        console.error('Align Item value is inappropriate')
-      }
-    } else {
-      alignItem = this.config.alignItem
+    if (args.padding && (typeof args.padding !== 'number' || args.padding < 0)) {
+      args.padding = this._config.padding
+      console.error('Padding value is inappropriate')
+    } else if (!args.padding) {
+      args.padding = this._config.padding
     }
 
-    if (args.padding) {
-      if (typeof args.padding === 'number' && args.padding > 0) {
-        padding = args.padding
-      } else {
-        padding = this.config.padding
-        console.error('Padding value is inappropriate')
-      }
-    } else {
-      padding = this.config.padding
+    if (args.strokeWidth && (typeof args.strokeWidth !== 'number' || args.strokeWidth < 0)) {
+      args.strokeWidth = this._config.strokeWidth
+      console.error('StrokeWidth value is inappropriate')
+    } else if (!args.strokeWidth) {
+      args.strokeWidth = this._config.strokeWidth
     }
 
-    if (args.strokeWidth) {
-      if (typeof args.strokeWidth === 'number' && args.strokeWidth > 0) {
-        strokeWidth = args.strokeWidth
-      } else {
-        strokeWidth = this.config.strokeWidth
-        console.error('StrokeWidth value is inappropriate')
-      }
-    } else {
-      strokeWidth = this.config.strokeWidth
+    if (args.orientation && !validOrientation.includes(args.orientation)) {
+      args.orientation = this._config.orientation
+      console.error('Orientation value is inappropriate')
+    } else if (!args.orientation) {
+      args.orientation = this._config.orientation
+    }
+    if (args.numberOfStars && (typeof args.numberOfStars !== 'number' ||
+        args.numberOfStars < 0)) {
+      args.numberOfStars = this._config.numberOfStars
+      console.error('Number of stars value is inappropriate')
+    } else if (!args.numberOfStars) {
+      args.numberOfStars = this._config.numberOfStars
+    }
+    args.rating = args.rating ? args.rating : this._config.rating
+    if (args.rating && (typeof args.rating !== 'number' || args.rating > args.numberOfStars ||
+        args.rating < 0)) {
+      args.rating = undefined
+      console.error('rating value is inappropriate')
+    }
+    if (args.ratedFill && !checkColorCode(args.ratedFill)) {
+      args.ratedFill = this._config.ratedFill
+      console.error('ratedFill value is inappropriate')
+    } else if (!args.ratedFill) {
+      args.ratedFill = this._config.ratedFill
     }
 
-    if (args.orientation) {
-      if (validOrientation.includes(args.orientation)) {
-        orientation = args.orientation
-      } else {
-        orientation = this.config.orientation
-        console.error('Orientation value is inappropriate')
-      }
-    } else {
-      orientation = this.config.orientation
+    if (args.nonRatedFill && !checkColorCode(args.nonRatedFill)) {
+      args.nonRatedFill = this._config.nonRatedFill
+      console.error('nonRatedFill value is inappropriate')
+    } else if (!args.nonRatedFill) {
+      args.nonRatedFill = this._config.nonRatedFill
     }
 
-    if (args.numberOfStars) {
-      if (typeof args.numberOfStars === 'number' && args.numberOfStars > 0) {
-        numberOfStars = args.numberOfStars
-      } else {
-        numberOfStars = this.config.numberOfStars
-        console.error('Number of stars value is inappropriate')
-      }
-    } else {
-      numberOfStars = this.config.numberOfStars
-    }
-    if (args.rating) {
-      if (typeof args.rating === 'number' && args.rating <= numberOfStars && args.rating > 0) {
-        rating = args.rating
-      } else {
-        rating = undefined
-        console.error('rating value is inappropriate')
-      }
-    } else {
-      rating = this.config.rating
+    if (args.ratedStroke && !checkColorCode(args.ratedStroke)) {
+      args.ratedStroke = this._config.ratedStroke
+      console.error('ratedStroke value is inappropriate')
+    } else if (!args.ratedStroke) {
+      args.ratedStroke = this._config.ratedStroke
     }
 
-    if (args.ratedFill) {
-      if (checkColorCode(args.ratedFill)) {
-        ratedFill = args.ratedFill
-      } else {
-        ratedFill = this.config.ratedFill
-        console.error('ratedFill value is inappropriate')
-      }
-    } else {
-      ratedFill = this.config.ratedFill
+    if (args.nonRatedStroke && !checkColorCode(args.nonRatedStroke)) {
+      args.nonRatedStroke = this._config.nonRatedStroke
+      console.error('nonRatedStroke value is inappropriate')
+    } else if (!args.nonRatedStroke) {
+      args.nonRatedStroke = this._config.nonRatedStroke
     }
-
-    if (args.nonRatedFill) {
-      if (checkColorCode(args.nonRatedFill)) {
-        nonRatedFill = args.nonRatedFill
-      } else {
-        nonRatedFill = this.config.nonRatedFill
-        console.error('nonRatedFill value is inappropriate')
-      }
-    } else {
-      nonRatedFill = this.config.nonRatedFill
-    }
-
-    if (args.ratedStroke) {
-      if (checkColorCode(args.ratedStroke)) {
-        ratedStroke = args.ratedStroke
-      } else {
-        ratedStroke = this.config.ratedStroke
-        console.error('ratedStroke value is inappropriate')
-      }
-    } else {
-      ratedStroke = this.config.ratedStroke
-    }
-
-    if (args.nonRatedStroke) {
-      if (checkColorCode(args.nonRatedStroke)) {
-        nonRatedStroke = args.nonRatedStroke
-      } else {
-        nonRatedStroke = this.config.nonRatedStroke
-        console.error('nonRatedStroke value is inappropriate')
-      }
-    } else {
-      nonRatedStroke = this.config.nonRatedStroke
-    }
-    let values = this._checkConfig(height, width, numberOfStars, orientation, padding, strokeWidth)
-    if (values !== false) {
-      this.config.height = height
-      this.config.width = width
-      this.config.orientation = orientation
-      this.config.justifyContent = justifyContent
-      this.config.alignItem = alignItem
-      this.config.padding = values.padding
-      this.config.strokeWidth = values.strokeWidth
-      this.config.numberOfStars = numberOfStars
-      this.config.rating = rating
-      this.config.ratedFill = ratedFill
-      this.config.nonRatedFill = nonRatedFill
-      this.config.ratedStroke = ratedStroke
-      this.config.nonRatedStroke = nonRatedStroke
+    if (checkConfig(args.height, args.width, args.numberOfStars, args.orientation, args.padding, args.strokeWidth)) {
+      this._config.width = args.width !== this._config.width ? args.width : this._config.width
+      this._config.height = args.height !== this._config.height ? args.height : this._config.height
+      this._config.orientation = args.orientation !== this._config.orientation ? args.orientation : this._config.orientation
+      this._config.justifyContent = args.justifyContent !== this._config.justifyContent ? args.justifyContent : this._config.justifyContent
+      this._config.alignItem = args.alignItem !== this._config.alignItem ? args.alignItem : this._config.alignItem
+      this._config.padding = args.padding !== this._config.padding ? args.padding : this._config.padding
+      this._config.strokeWidth = args.strokeWidth !== this._config.strokeWidth ? args.strokeWidth : this._config.strokeWidth
+      this._config.numberOfStars = args.numberOfStars !== this._config.numberOfStars ? args.numberOfStars : this._config.numberOfStars
+      this._config.rating = args.rating !== this._config.rating ? args.rating : this._config.rating
+      this._config.ratedFill = args.ratedFill !== this._config.ratedFill ? args.ratedFill : this._config.ratedFill
+      this._config.nonRatedFill = args.nonRatedFill !== this._config.nonRatedFill ? args.nonRatedFill : this._config.nonRatedFill
+      this._config.ratedStroke = args.ratedStroke !== this._config.ratedStroke ? args.ratedStroke : this._config.ratedStroke
+      this._config.nonRatedStroke = args.nonRatedFill !== this._config.nonRatedFill ? args.nonRatedFill : this._config.nonRatedFill
       return true
     }
     return false
   }
-  _checkConfig (height, width, numberOfStars, orientation, padding, strokeWidth) {
-    let block
-    if (orientation === 'l2r' || orientation === 'r2l') {
-      block = Math.min(height, width / numberOfStars)
-    } else {
-      block = Math.min(width, height / numberOfStars)
-    }
-    if (block < 10) {
-      return false
-    }
-    if (block * 0.1 < padding) {
-      console.error('Padding cannot be greater than 10% of blockSize')
-      padding = block * 0.1
-    }
-    if (block * 0.1 < strokeWidth) {
-      console.error('StrokeWidth cannot be greater than 10% of blockSize')
-      strokeWidth = block * 0.1
-    }
-    if ((block - 2 * (padding + strokeWidth)) / block < 0.2) {
-      return false
-    }
-    return { padding: padding, strokeWidth: strokeWidth }
-  }
   _draw () {
-    /*
-    if (this.config.structuralStatus === 1) {
-      // reset svg width height
-      this.config.svg.setAttribute('width', this.config.width)
-      this.config.svg.setAttribute('height', this.config.height)
-      // re-calculate d
-      let blockSize
-      let justifyOffset
-      let alignOffset
-      if (this.config.orientation === 'l2r' || this.config.orientation === 'r2l') {
-        blockSize = Math.min(this.config.height, this.config.width / this.config.numberOfStars)
-        justifyOffset = this._calculateJustify(this.config.justifyContent, this.config.width, blockSize, this.config.numberOfStars)
-        alignOffset = this._calculateAlign(this.config.alignItem, this.config.height, blockSize)
-      } else {
-        blockSize = Math.min(this.config.width, this.config.height / this.config.numberOfStars)
-        justifyOffset = this._calculateJustify(this.config.justifyContent, this.config.height, blockSize, this.config.numberOfStars)
-        alignOffset = this._calculateAlign(this.config.alignItem, this.config.width, blockSize)
-      }
-      for (let i = 0; i < this.config.stars.length; i++) {
-        let offset
-        if (this.config.justifyContent !== 'space-evenly') {
-          offset = justifyOffset + blockSize * i + this.config.strokeWidth
-        } else {
-          offset = (2 * i + 1) * justifyOffset + i * blockSize + this.config.strokeWidth
-        }
-        if (this.config.orientation === 'l2r' || this.config.orientation === 'r2l') {
-          this.config.stars[i].setAttribute('d',
-            this._calculateStar(offset, alignOffset, blockSize, this.config.strokeWidth, this.config.padding))
-        } else {
-          this.config.stars[i].setAttribute('d',
-            this._calculateStar(alignOffset, offset, blockSize, this.config.strokeWidth, this.config.padding))
-        }
-        this.config.stars[i].setAttribute('stroke-width', this.config.strokeWidth)
+    this._config.svg.setAttribute('width', this._config.width)
+    this._config.svg.setAttribute('height', this._config.height)
+    if (this._config.stars.length < this._config.numberOfStars) {
+      let n = this._config.numberOfStars - this._config.stars.length
+      for (let i = 0; i < n; i++) {
+        let path = createDOMNode('path')
+        this._config.stars.push(path)
+        this._config.svg.appendChild(path)
       }
     }
-    */
-    this.config.svg.setAttribute('width', this.config.width)
-    this.config.svg.setAttribute('height', this.config.height)
-    if (this.config.stars.length < this.config.numberOfStars) {
-      let n = this.config.numberOfStars - this.config.stars.length
+    if (this._config.stars.length > this._config.numberOfStars) {
+      let n = this._config.stars.length - this._config.numberOfStars
       for (let i = 0; i < n; i++) {
-        let path = this._createDOMNode('path')
-        this.config.stars.push(path)
-        this.config.svg.appendChild(path)
-      }
-    }
-    if (this.config.stars.length > this.config.numberOfStars) {
-      let n = this.config.stars.length - this.config.numberOfStars
-      for (let i = 0; i < n; i++) {
-        this.config.stars.pop().remove()
+        this._config.stars.pop().remove()
       }
     }
     let blockSize
     let justifyOffset
     let alignOffset
-    if (this.config.orientation === 'l2r' || this.config.orientation === 'r2l') {
-      blockSize = Math.min(this.config.height, this.config.width / this.config.numberOfStars)
-      justifyOffset = this._calculateJustify(this.config.justifyContent, this.config.width, blockSize, this.config.numberOfStars)
-      alignOffset = this._calculateAlign(this.config.alignItem, this.config.height, blockSize)
+    if (this._config.orientation === 'l2r' || this._config.orientation === 'r2l') {
+      blockSize = Math.min(this._config.height, this._config.width / this._config.numberOfStars)
+      justifyOffset = calculateJustify(this._config.justifyContent, this._config.width, blockSize, this._config.numberOfStars)
+      alignOffset = calculateAlign(this._config.alignItem, this._config.height, blockSize)
     } else {
-      blockSize = Math.min(this.config.width, this.config.height / this.config.numberOfStars)
-      justifyOffset = this._calculateJustify(this.config.justifyContent, this.config.height, blockSize, this.config.numberOfStars)
-      alignOffset = this._calculateAlign(this.config.alignItem, this.config.width, blockSize)
+      blockSize = Math.min(this._config.width, this._config.height / this._config.numberOfStars)
+      justifyOffset = calculateJustify(this._config.justifyContent, this._config.height, blockSize, this._config.numberOfStars)
+      alignOffset = calculateAlign(this._config.alignItem, this._config.width, blockSize)
     }
-    let rating = this.config.rating
+    let rating = this._config.rating
     if (rating === undefined) {
-      rating = this.config.numberOfStars
+      rating = this._config.numberOfStars
     }
     if (Number.parseInt(rating) !== rating) {
       let n = (rating - Number.parseInt(rating)) * 100 + '%'
-      this.config.gradientRatedFill.setAttribute('offset', n)
-      this.config.gradientNonRatedFill.setAttribute('offset', n)
-      this.config.gradientRatedStroke.setAttribute('offset', n)
-      this.config.gradientNonRatedStroke.setAttribute('offset', n)
-      if (this.config.orientation === 'l2r' || this.config.orientation === 't2b') {
-        this.config.gradientRatedFill.setAttribute('stop-color', this.config.ratedFill)
-        this.config.gradientNonRatedFill.setAttribute('stop-color', this.config.nonRatedFill)
-        this.config.gradientRatedStroke.setAttribute('stop-color', this.config.ratedStroke)
-        this.config.gradientNonRatedStroke.setAttribute('stop-color', this.config.nonRatedStroke)
+      document.getElementById('rated-fill').setAttribute('offset', n)
+      document.getElementById('non-rated-fill').setAttribute('offset', n)
+      document.getElementById('rated-stroke').setAttribute('offset', n)
+      document.getElementById('non-rated-stroke').setAttribute('offset', n)
+      if (this._config.orientation === 'l2r' || this._config.orientation === 't2b') {
+        document.getElementById('rated-fill').setAttribute('stop-color', this._config.ratedFill)
+        document.getElementById('non-rated-fill').setAttribute('stop-color', this._config.nonRatedFill)
+        document.getElementById('rated-stroke').setAttribute('stop-color', this._config.ratedStroke)
+        document.getElementById('non-rated-stroke').setAttribute('stop-color', this._config.nonRatedStroke)
       } else {
-        this.config.gradientRatedFill.setAttribute('stop-color', this.config.nonRatedFill)
-        this.config.gradientNonRatedFill.setAttribute('stop-color', this.config.ratedFill)
-        this.config.gradientRatedStroke.setAttribute('stop-color', this.config.nonRatedStroke)
-        this.config.gradientNonRatedStroke.setAttribute('stop-color', this.config.ratedStroke)
+        document.getElementById('rated-fill').setAttribute('stop-color', this._config.nonRatedFill)
+        document.getElementById('non-rated-fill').setAttribute('stop-color', this._config.ratedFill)
+        document.getElementById('rated-stroke').setAttribute('stop-color', this._config.nonRatedStroke)
+        document.getElementById('non-rated-stroke').setAttribute('stop-color', this._config.ratedStroke)
       }
     }
-    for (let i = 0; i < this.config.stars.length; i++) {
+    for (let i = 0; i < this._config.stars.length; i++) {
       let offset
-      if (this.config.justifyContent !== 'space-evenly') {
-        offset = justifyOffset + blockSize * i + this.config.strokeWidth
+      if (this._config.justifyContent !== 'space-evenly') {
+        offset = justifyOffset + blockSize * i + this._config.strokeWidth
       } else {
-        offset = (2 * i + 1) * justifyOffset + i * blockSize + this.config.strokeWidth
+        offset = (2 * i + 1) * justifyOffset + i * blockSize + this._config.strokeWidth
       }
-      if (this.config.orientation === 'l2r' || this.config.orientation === 'r2l') {
-        this.config.stars[i].setAttribute('d',
-          this._calculateStar(offset, alignOffset, blockSize, this.config.strokeWidth, this.config.padding))
+      if (this._config.orientation === 'l2r' || this._config.orientation === 'r2l') {
+        this._config.stars[i].setAttribute('d',
+          this._calculateStar(offset, alignOffset, blockSize, this._config.strokeWidth, this._config.padding))
       } else {
-        this.config.stars[i].setAttribute('d',
-          this._calculateStar(alignOffset, offset, blockSize, this.config.strokeWidth, this.config.padding))
+        this._config.stars[i].setAttribute('d',
+          this._calculateStar(alignOffset, offset, blockSize, this._config.strokeWidth, this._config.padding))
       }
       let j = i
-      if (this.config.orientation === 'r2l' || this.config.orientation === 'b2t') {
-        j = this.config.stars.length - 1 - i
+      if (this._config.orientation === 'r2l' || this._config.orientation === 'b2t') {
+        j = this._config.stars.length - 1 - i
       }
       if (rating >= 1) {
-        this.config.stars[j].setAttribute('fill', this.config.ratedFill)
-        this.config.stars[j].setAttribute('stroke', this.config.ratedStroke)
+        this._config.stars[j].setAttribute('fill', this._config.ratedFill)
+        this._config.stars[j].setAttribute('stroke', this._config.ratedStroke)
       } else if (rating > 0 && rating < 1) {
-        this.config.stars[j].setAttribute('fill', 'url(#gradient-fill)')
-        this.config.stars[j].setAttribute('stroke', 'url(#gradient-stroke)')
+        this._config.stars[j].setAttribute('fill', 'url(#gradient-fill)')
+        this._config.stars[j].setAttribute('stroke', 'url(#gradient-stroke)')
       } else {
-        this.config.stars[j].setAttribute('fill', this.config.nonRatedFill)
-        this.config.stars[j].setAttribute('stroke', this.config.nonRatedStroke)
+        this._config.stars[j].setAttribute('fill', this._config.nonRatedFill)
+        this._config.stars[j].setAttribute('stroke', this._config.nonRatedStroke)
       }
       rating -= 1
-      this.config.stars[i].setAttribute('stroke-width', this.config.strokeWidth)
+      this._config.stars[i].setAttribute('stroke-width', this._config.strokeWidth)
     }
-  }
-  _calculateJustify (justify, side, blockSize, numberOfStars) {
-    if (justify === 'start') {
-      return 0
-    } else if (justify === 'end') {
-      return side - blockSize * numberOfStars
-    } else if (justify === 'center') {
-      return (side - blockSize * numberOfStars) / 2
-    } else if (justify === 'space-evenly') {
-      return (side - blockSize * numberOfStars) / (2 * numberOfStars)
-    }
-  }
-  _calculateAlign (align, side, blockSize) {
-    if (align === 'start') {
-      return 0
-    } else if (align === 'end') {
-      return side - blockSize
-    } else if (align === 'center') {
-      return (side - blockSize) / 2
+    if (typeof this.onDraw === 'function') {
+      this.onDraw()
     }
   }
   _calculateStar (offsetWidth, offsetHeight, blockSize, strokeWidth, padding) {
@@ -503,13 +393,5 @@ export default class RatingChart {
       'H' + (cx - offsetX) + ' ' +
       'Z'
     return d
-  }
-  _createDOMNode (nodeName, args = []) {
-    const xlmnsSvg = 'http://www.w3.org/2000/svg'
-    const node = document.createElementNS(xlmnsSvg, nodeName)
-    for (let property in args) {
-      node.setAttribute(property, args[property])
-    }
-    return node
   }
 }

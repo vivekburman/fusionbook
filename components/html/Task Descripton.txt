@@ -1,0 +1,190 @@
+Important Note: 
+1. calling _draw function from requestAnimationFrame
+    should be called as following requestAnimationFrame(()=>this._draw())
+2. Height, width does not takes % value.
+
+3. RequestAnimationFrame should not register multiple times. Add a variable state: true,
+    once requestAnimationFrame is called set state: false, and when complete set state
+    back to true.
+
+List of properties inside config: {
+    height, width, numberOfStars, orientation, padding, strokeWidth, ratedFill,
+    ratedStroke, nonRatedFill, nonRatedStroke, starsArray, container, svg, rating,
+    justifyContent, alignItem 
+}
+
+A class named RatingChart
+methods:- 
+    a. constructor() => {
+        params: {
+            container: A DOM div element,
+            args: object with configs values
+        }
+        task: {
+            0. validate container, if false return null
+            1. set default value for all params + container + starsArray
+            2. create a new svg DOM element using createDOMNode() and append it to container
+            3. create (defs, linearGradient, stop will be accessed using ids) using 
+                _createGradient() and createDOMNode() and append it to svg
+            4. if args is undefined, then pass _draw method to requestAnimationFrame
+            5. else call _validateAndSet() on args
+                5.1 if _validateAndState is true (i.e. configuration is possible)
+                    5.1.1 pass _draw method to requestAnimationFrame
+                5.2 else 
+                    5.2.1 show an error log "configurtion is not possible"
+        }
+    }
+    b. update() => {
+        params: {
+            args: object with configs that user wants to update
+        }
+        task: {
+            1. call _validateAndSet() on args
+            2.  if _validateAndSet() is true (i.e. configuration is possible)
+                2.1 check where this.config.values are different from args.config.values
+                2.2 for those changes only call the setAttribute()
+                    i.e. {
+                        width, height, 
+                        linearGradient(ratedFill, ratedStroke, nonRatedFill, nonRatedStroke)
+                    }
+                    2.2.1 if defs is present update it too, if changes are there
+                2.3 pass _draw method to requestAnimationFrame
+            3. if _validateAndState() is false
+                3.1 show an error log "configuration is not possible"
+            4. then check if user has provided onUpdate() then call it 
+        }
+    }
+    c. _validateAndSet() => {
+        params: 
+            args: available from, user passed args during constructor or during update
+        }
+        task: {
+            1. create local variable
+            2. one by one validate all args values
+                2.1 if present args.param
+                    2.1.1 check if it is valid,(using possible helper functions) then assign it to its local 
+                            corresponding param
+                    2.1.2 else, assign its local corresponding param from this.config.param
+                2.2 else 
+                    2.2.1 assign its local corresponding param from this.config.param
+            3. call checkConfig(height, width, numberOfStars, padding, strokeWidth) 
+                all local params
+                3.1 if it returns true, assign all local params to there
+                    corresponding this.config.params return true
+                3.2 else return false
+        }
+    d. _draw() => {
+        params: {
+            nothing, everything is accessed from this.config
+        }
+        task: {
+            1. check if there is change in numberOfStars
+                1.1 if increment then add path nodes(will be called using ids) 
+                    using createDOMNode(), and append it to svg, and starsArray
+                1.2 if decrement then remove from DOM and starsArray
+            2. based on orientation find blockSize, justifyOffset[calculateJustify()], 
+                alignOffset[calculateAlign()]
+            3. if rating is undefined, set it to numberOfStars
+            4. if rating is a fractional value, update linearGradient
+                4.1 change only offset attribute, as everything else has already been updated
+            5. iterate over stars list (paths)
+                5.1 if this.config.justifyContent is 'space-evenly'
+                    offset is calculated differently
+                5.2 else a standard formula
+                5.3 based on orientation calculate 'd' using calculateStar(), and add
+                    it to path setAttribute()
+                5.4 assign ratedFill, nonRatedFill, ratedStroke, nonRatedStroke 
+                    according to rating value, to each path using setAttribute()
+                5.5 assign offset to linearGradient using setAttribute()
+            6. if user has provided onDraw() then call it 
+        }
+        e. _createGradient(): {
+            params: {
+                nothing
+            }
+            task: {
+                1. create defs
+                2. create linearGradient, with id 'gradientFill'
+                    2.1 create its corresponding stops and assign ids
+                3. create linearGradient, with id 'gradientStroke'
+                    3.1 create its corresponding stops and assign ids
+                4. append all these to svg
+            }
+        }
+        g. Helper functions {
+            setAttribute(): {
+                params: {
+                    domElement, attributeName, attributeValue
+                }
+                task: {
+                    1. set attributes with respective values
+                }
+            }
+            calculateStar(): {
+                params: {
+                    offsetWidth, offsetHeight, blockSize, strokeWidth, padding
+                }
+                task: {
+                    1. calculate 'd' using formula.
+                    2. return d as a string
+                }
+            }
+            createDOMNode(): {
+                params: {
+                    nodeName
+                }
+                task: {
+                    1. create a new DOM node.
+                    2. return node
+                }
+            }
+            calculateJustify(): {
+                params: {
+                    justify, side, blockSize, numberOfStars
+                }
+                task: {
+                    1. based on justify, calculate and  return justifyOffset
+                }
+            }
+            calculateAlign(): {
+                params: {
+                    align, side, blockSize
+                }
+                task: {
+                    1. based on align, calculate and return alignOffset
+                }
+            }
+            checkConfig(): {
+                params: {
+                    height, width, numberOfStars, orientation, padding, strokeWidth
+                }
+                task: {
+                    1. calculate if blockSize < 10px, return false
+                    2. calculate if padding is greater than 10% of blockSize, return false
+                    3. calculate if strokeWidth is greater than 10% of blockSize, return false
+                    4. if maincontent(i.e star) is not 20% of blockSize, return false
+                    5. return true
+                }
+            }
+            checkColorCode(): {
+                params: {
+                    color
+                }
+                task: {
+                    1. if is invalid hexcode, return false
+                    2. if is invalid rbg, return false
+                }
+            }
+            checkSidevalue(): {
+                params: {
+                    val, side
+                }
+                task: {
+                    1. if value is numerical and greater than 10, return val
+                    2. if in px and numerical is greater than 10, return val
+                    3. return -1
+                }
+            }
+        }
+    }
+    }
