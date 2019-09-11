@@ -436,7 +436,7 @@ ratingStory.addChapter(
     }
   },
   [
-    notes('onUpdate and onDraw will be called after 1s')
+    notes('Rating value passed from server')
   ]
 )
 export default ratingStory
