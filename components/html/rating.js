@@ -1,378 +1,382 @@
-function checkColorCode (str) {
-  if (str.startsWith('#') && !(/(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)|(^#[0-9a-f]{6}$)|(^#[0-9a-f]{3}$) /i.test(str))) {
-    return false
-  } else if (str.startsWith('rgb') && !(/^rgb\((\d{1,3}),(\d{1,3}),(\d{1,3})\)/i.test(str))) {
-    return false
-  }
-  return true
-}
-function checkConfig (height, width, numberOfStars, orientation, padding, strokeWidth) {
-  let block
-  if (orientation === 'l2r' || orientation === 'r2l') {
-    block = Math.min(height, width / numberOfStars)
-  } else {
-    block = Math.min(width, height / numberOfStars)
-  }
-  if (block * 0.1 < padding) {
-    console.error('Configuration not possible as Padding cannot be greater than 10% of blockSize')
-    return false
-  }
-  if (block * 0.1 < strokeWidth) {
-    console.error('Configuration not possible as StrokeWidth cannot be greater than 10% of blockSize')
-    return false
-  }
-  if ((block - 2 * (padding + strokeWidth)) / block < 0.2) {
-    console.log('Configuration not possible as Content area should be atleast 20% of available space')
-    return false
-  }
-  return true
-}
-function checkSideValue (val) {
-  if (typeof val === 'number' && val > 10) {
-    return val
-  } else if (typeof val === 'string' && val.endsWith('px')) {
-    let v
-    v = val.substr(0, val.indexOf('px'))
-    if (v > 10) {
-      return v
-    }
-  }
-  return -1
-}
-function createDOMNode (nodeName, args = []) {
-  const xlmnsSvg = 'http://www.w3.org/2000/svg'
-  const node = document.createElementNS(xlmnsSvg, nodeName)
-  for (let property in args) {
-    node.setAttribute(property, args[property])
-  }
-  return node
-}
-function calculateJustify (justify, side, blockSize, numberOfStars) {
-  if (justify === 'start') {
-    return 0
-  } else if (justify === 'end') {
-    return side - blockSize * numberOfStars
-  } else if (justify === 'center') {
-    return (side - blockSize * numberOfStars) / 2
-  } else if (justify === 'space-evenly') {
-    return (side - blockSize * numberOfStars) / (2 * numberOfStars)
-  }
-}
-function calculateAlign (align, side, blockSize) {
-  if (align === 'start') {
-    return 0
-  } else if (align === 'end') {
-    return side - blockSize
-  } else if (align === 'center') {
-    return (side - blockSize) / 2
-  }
-}
 export default class RatingChart {
   constructor (container, args) {
     if (!(container instanceof HTMLElement)) {
-      console.error('Container is not a valid HTML element')
+      console.error('Container is not a valid DOM Element')
       return null
     }
     this._config = {
       height: 400,
       width: 400,
-      justifyContent: 'center',
-      alignItem: 'center',
-      padding: 1,
-      strokeWidth: 0,
-      orientation: 'l2r',
       numberOfStars: 5,
-      rating: undefined,
       ratedFill: '#ff0',
       nonRatedFill: '#ddd',
       ratedStroke: 'none',
       nonRatedStroke: 'none',
+      rating: undefined,
+      justifyContent: 'center',
+      alignItem: 'center',
+      orientation: 'l2r',
       container: container,
-      svg: createDOMNode('svg'),
-      stars: [],
-      animationFrameActive: true
+      strokeWidth: 0,
+      padding: 1,
+      isAnimationFrameAvailable: true
     }
-    this._config.container.appendChild(this._config.svg)
-    this._createGradient()
+    this._svg = {
+      element: createDOMNode('svg'),
+      'width': undefined,
+      'height': undefined,
+      defs: {
+        element: undefined,
+        defsCommonProperties: {
+          stopOffset: undefined,
+          orientation: undefined,
+          x1: undefined,
+          x2: undefined,
+          y1: undefined,
+          y2: undefined
+        },
+        gradientFill: {
+          element: undefined,
+          url: 'gradient-fill',
+          ratedStop: {
+            element: undefined,
+            'stop-color': undefined
+          },
+          nonRatedStop: {
+            element: undefined,
+            'stop-color': undefined
+          }
+        },
+        gradientStroke: {
+          element: undefined,
+          url: 'gradient-stroke',
+          ratedStop: {
+            element: undefined,
+            'stop-color': undefined
+          },
+          nonRatedStop: {
+            element: undefined,
+            'stop-color': undefined
+          }
+        }
+      },
+      stars: []
+    }
+    this._config.container.appendChild(this._svg.element)
     this._createAndUpdate(args)
   }
   _createAndUpdate (args) {
     if (!args || (args && this._validateAndSet(args))) {
-      if (this._config.animationFrameActive) {
-        this._config.animationFrameActive = false
+      if (this._config.isAnimationFrameAvailable) {
+        this._config.isAnimationFrameAvailable = false
         requestAnimationFrame(() => {
+          this._config.isAnimationFrameAvailable = true
           this._draw()
-          this._config.animationFrameActive = true
         })
       }
     }
   }
   update (args) {
-    if (args) {
-      this._createAndUpdate(args)
-    }
+    this._createAndUpdate(args)
     if (typeof this.onUpdate === 'function') {
       this.onUpdate()
+    } else if (this.onUpdate) {
+      console.error('onUpdate is not a function')
     }
-  }
-  _createGradient () {
-    const defs = createDOMNode('defs')
-    let args = {
-      'id': 'gradient-fill',
-      'x1': '0%',
-      'x2': '100%',
-      'y1': '0%',
-      'y2': '0%'
-    }
-
-    const gradientFill = createDOMNode('linearGradient', args)
-    args = {
-      'id': 'gradient-stroke',
-      'x1': '0%',
-      'x2': '100%',
-      'y1': '0%',
-      'y2': '0%'
-    }
-    const gradientStroke = createDOMNode('linearGradient', args)
-    args = {
-      'offset': '0%',
-      'stop-color': this._config.ratedFill,
-      'id': 'rated-fill'
-    }
-    let stop = createDOMNode('stop', args)
-    gradientFill.appendChild(stop)
-    args = {
-      'offset': '0%',
-      'stop-color': this._config.nonRatedFill,
-      'id': 'non-rated-fill'
-    }
-    stop = createDOMNode('stop', args)
-    gradientFill.appendChild(stop)
-    // end of fill
-    args = {
-      'offset': '0%',
-      'stop-color': this._config.ratedStroke,
-      'id': 'rated-stroke'
-    }
-    stop = createDOMNode('stop', args)
-    gradientStroke.appendChild(stop)
-    args = {
-      'offset': '0%',
-      'stop-color': this._config.nonRatedStroke,
-      'id': 'non-rated-stroke'
-    }
-    stop = createDOMNode('stop', args)
-    gradientStroke.appendChild(stop)
-    defs.appendChild(gradientFill)
-    defs.appendChild(gradientStroke)
-    this._config.svg.appendChild(defs)
   }
   _validateAndSet (args) {
-    let validJustifyContents = ['start', 'end', 'center', 'space-evenly']
-    let validAlignItems = ['start', 'end', 'center']
-    let validOrientation = ['l2r', 'r2l', 't2b', 'b2t']
-
     if (args.height) {
-      let val = checkSideValue(args.height)
-      if (val !== -1) {
-        args.height = val
+      let val = typeof args.height === 'number' ? args.height : extractNumericalValue(args.height)
+      if (val > 10) {
+        this._config.height = val
       } else {
-        args.height = this._config.height
-        console.error('Height value is inappropriate')
+        console.error('Height is less than 10px')
       }
-    } else {
-      args.height = this._config.height
     }
-
     if (args.width) {
-      let val = checkSideValue(args.width)
-      if (val !== -1) {
-        args.width = val
+      let val = typeof args.width === 'number' ? args.width : extractNumericalValue(args.width)
+      if (val > 10) {
+        this._config.width = val
       } else {
-        args.width = this._config.width
-        console.error('Width value is inappropriate')
+        console.error('Width is less than 10px')
       }
+    }
+    if (args.ratedFill) {
+      if (checkColorCode(args.ratedFill)) {
+        this._config.ratedFill = args.ratedFill
+      } else {
+        console.error('Invalid value RatedFill')
+      }
+    }
+    if (args.nonRatedFill) {
+      if (checkColorCode(args.nonRatedFill)) {
+        this._config.nonRatedFill = args.nonRatedFill
+      } else {
+        console.error('Invalid value NonRatedFill')
+      }
+    }
+    if (args.ratedStroke) {
+      if (checkColorCode(args.ratedStroke)) {
+        this._config.ratedStroke = args.ratedStroke
+      } else {
+        console.error('Invalid value ratedStroke')
+      }
+    }
+    if (args.nonRatedStroke) {
+      if (checkColorCode(args.nonRatedStroke)) {
+        this._config.nonRatedStroke = args.nonRatedStroke
+      } else {
+        console.error('Invalid value NonRatedStroke')
+      }
+    }
+    if (args.justifyContent) {
+      if (typeof args.justifyContent === 'string' &&
+      ['start', 'end', 'center', 'space-evenly'].includes(args.justifyContent.toLowerCase())) {
+        this._config.justifyContent = args.justifyContent
+      } else {
+        console.error('Invalid value of JustifyContent')
+      }
+    }
+    if (args.alignItem) {
+      if (typeof args.alignItem === 'string' &&
+      ['start', 'end', 'center'].includes(args.alignItem.toLowerCase())) {
+        this._config.alignItem = args.alignItem
+      } else {
+        console.error('Invalid value of AlignItem')
+      }
+    }
+    if (args.strokeWidth) {
+      if (args.strokeWidth > 0) {
+        this._config.strokeWidth = args.strokeWidth
+      } else {
+        console.error('StrokeWidth should be a positive number')
+      }
+    }
+    if (args.padding) {
+      if (args.padding > 0) {
+        this._config.padding = args.padding
+      } else {
+        console.error('Padding should be a positive number')
+      }
+    }
+    if (args.orientation) {
+      if (['l2r', 'r2l', 't2b', 'b2t'].includes(args.orientation)) {
+        this._config.orientation = args.orientation
+      } else {
+        console.error('Invalid value of orientation')
+      }
+    }
+    if (args.numberOfStars) {
+      if (args.numberOfStars > -1) {
+        this._config.numberOfStars = Number.parseInt(args.numberOfStars)
+      } else {
+        console.error('Improper value of numberOfStars')
+      }
+    }
+    if (args.rating) {
+      if (this._config.numberOfStars > args.rating && args.rating > -1) {
+        this._config.rating = args.rating
+      } else {
+        this._config.rating = undefined
+        console.error('Improper rating value')
+      }
+    } else if (this._config.numberOfStars < this._config.rating) {
+      this._config.rating = undefined
+      console.error('Rating cannot be more than numberOfStars')
+    }
+    return this._checkConfig()
+  }
+  _checkConfig () {
+    let block
+    if (this._config.orientation === 'l2r' || this._config.orientation === 'r2l') {
+      block = Math.min(this._config.height, this._config.width / this._config.numberOfStars)
     } else {
-      args.width = this._config.width
+      block = Math.min(this._config.width, this._config.height / this._config.numberOfStars)
     }
-    if (args.justifyContent && (typeof args.justifyContent !== 'string' ||
-        !validJustifyContents.includes(args.justifyContent.toLowerCase()))) {
-      args.justifyContent = this._config.justifyContent
-      console.error('JustifyContent value is inappropriate')
-    } else if (!args.justifyContent) {
-      args.justifyContent = this._config.justifyContent
+    if (block * 0.1 < this._config.padding) {
+      console.error('Configuration not possible as Padding cannot be greater than 10% of blockSize')
+      return false
     }
-
-    if (args.alignItem && (typeof args.alignItem !== 'string' ||
-        !validAlignItems.includes(args.alignItem.toLowerCase()))) {
-      args.alignItem = this._config.alignItem
-      console.error('Align Item value is inappropriate')
-    } else if (!args.alignItem) {
-      args.alignItem = this._config.alignItem
+    if (block * 0.1 < this._config.strokeWidth) {
+      console.error('Configuration not possible as StrokeWidth cannot be greater than 10% of blockSize')
+      return false
     }
-
-    if (args.padding && (typeof args.padding !== 'number' || args.padding < 0)) {
-      args.padding = this._config.padding
-      console.error('Padding value is inappropriate')
-    } else if (!args.padding) {
-      args.padding = this._config.padding
+    if ((block - 2 * (this._config.padding + this._config.strokeWidth)) / block < 0.2) {
+      console.error('Configuration not possible as Content area should be atleast 20% of available space')
+      return false
     }
-
-    if (args.strokeWidth && (typeof args.strokeWidth !== 'number' || args.strokeWidth < 0)) {
-      args.strokeWidth = this._config.strokeWidth
-      console.error('StrokeWidth value is inappropriate')
-    } else if (!args.strokeWidth) {
-      args.strokeWidth = this._config.strokeWidth
-    }
-
-    if (args.orientation && !validOrientation.includes(args.orientation)) {
-      args.orientation = this._config.orientation
-      console.error('Orientation value is inappropriate')
-    } else if (!args.orientation) {
-      args.orientation = this._config.orientation
-    }
-    if (args.numberOfStars && (typeof args.numberOfStars !== 'number' ||
-        args.numberOfStars < 0)) {
-      args.numberOfStars = this._config.numberOfStars
-      console.error('Number of stars value is inappropriate')
-    } else if (!args.numberOfStars) {
-      args.numberOfStars = this._config.numberOfStars
-    }
-    args.rating = args.rating ? args.rating : this._config.rating
-    if (args.rating && (typeof args.rating !== 'number' || args.rating > args.numberOfStars ||
-        args.rating < 0)) {
-      args.rating = undefined
-      console.error('rating value is inappropriate')
-    }
-    if (args.ratedFill && !checkColorCode(args.ratedFill)) {
-      args.ratedFill = this._config.ratedFill
-      console.error('ratedFill value is inappropriate')
-    } else if (!args.ratedFill) {
-      args.ratedFill = this._config.ratedFill
-    }
-
-    if (args.nonRatedFill && !checkColorCode(args.nonRatedFill)) {
-      args.nonRatedFill = this._config.nonRatedFill
-      console.error('nonRatedFill value is inappropriate')
-    } else if (!args.nonRatedFill) {
-      args.nonRatedFill = this._config.nonRatedFill
-    }
-
-    if (args.ratedStroke && !checkColorCode(args.ratedStroke)) {
-      args.ratedStroke = this._config.ratedStroke
-      console.error('ratedStroke value is inappropriate')
-    } else if (!args.ratedStroke) {
-      args.ratedStroke = this._config.ratedStroke
-    }
-
-    if (args.nonRatedStroke && !checkColorCode(args.nonRatedStroke)) {
-      args.nonRatedStroke = this._config.nonRatedStroke
-      console.error('nonRatedStroke value is inappropriate')
-    } else if (!args.nonRatedStroke) {
-      args.nonRatedStroke = this._config.nonRatedStroke
-    }
-    if (checkConfig(args.height, args.width, args.numberOfStars, args.orientation, args.padding, args.strokeWidth)) {
-      this._config.width = args.width !== this._config.width ? args.width : this._config.width
-      this._config.height = args.height !== this._config.height ? args.height : this._config.height
-      this._config.orientation = args.orientation !== this._config.orientation ? args.orientation : this._config.orientation
-      this._config.justifyContent = args.justifyContent !== this._config.justifyContent ? args.justifyContent : this._config.justifyContent
-      this._config.alignItem = args.alignItem !== this._config.alignItem ? args.alignItem : this._config.alignItem
-      this._config.padding = args.padding !== this._config.padding ? args.padding : this._config.padding
-      this._config.strokeWidth = args.strokeWidth !== this._config.strokeWidth ? args.strokeWidth : this._config.strokeWidth
-      this._config.numberOfStars = args.numberOfStars !== this._config.numberOfStars ? args.numberOfStars : this._config.numberOfStars
-      this._config.rating = args.rating !== this._config.rating ? args.rating : this._config.rating
-      this._config.ratedFill = args.ratedFill !== this._config.ratedFill ? args.ratedFill : this._config.ratedFill
-      this._config.nonRatedFill = args.nonRatedFill !== this._config.nonRatedFill ? args.nonRatedFill : this._config.nonRatedFill
-      this._config.ratedStroke = args.ratedStroke !== this._config.ratedStroke ? args.ratedStroke : this._config.ratedStroke
-      this._config.nonRatedStroke = args.nonRatedFill !== this._config.nonRatedFill ? args.nonRatedFill : this._config.nonRatedFill
-      return true
-    }
-    return false
+    return true
   }
   _draw () {
-    this._config.svg.setAttribute('width', this._config.width)
-    this._config.svg.setAttribute('height', this._config.height)
-    if (this._config.stars.length < this._config.numberOfStars) {
-      let n = this._config.numberOfStars - this._config.stars.length
-      for (let i = 0; i < n; i++) {
-        let path = createDOMNode('path')
-        this._config.stars.push(path)
-        this._config.svg.appendChild(path)
-      }
-    }
-    if (this._config.stars.length > this._config.numberOfStars) {
-      let n = this._config.stars.length - this._config.numberOfStars
-      for (let i = 0; i < n; i++) {
-        this._config.stars.pop().remove()
-      }
-    }
+    this._setAttribute(this._svg, {
+      'width': this._config.width,
+      'height': this._config.height
+    }, true)
     let blockSize
-    let justifyOffset
-    let alignOffset
+    let justify
+    let align
     if (this._config.orientation === 'l2r' || this._config.orientation === 'r2l') {
       blockSize = Math.min(this._config.height, this._config.width / this._config.numberOfStars)
-      justifyOffset = calculateJustify(this._config.justifyContent, this._config.width, blockSize, this._config.numberOfStars)
-      alignOffset = calculateAlign(this._config.alignItem, this._config.height, blockSize)
+      justify = this._calculateJustifyAndAlign(this._config.justifyContent, this._config.width, blockSize, this._config.numberOfStars)
+      align = this._calculateJustifyAndAlign(this._config.alignItem, this._config.height, blockSize)
     } else {
       blockSize = Math.min(this._config.width, this._config.height / this._config.numberOfStars)
-      justifyOffset = calculateJustify(this._config.justifyContent, this._config.height, blockSize, this._config.numberOfStars)
-      alignOffset = calculateAlign(this._config.alignItem, this._config.width, blockSize)
+      justify = this._calculateJustifyAndAlign(this._config.justifyContent, this._config.height, blockSize, this._config.numberOfStars)
+      align = this._calculateJustifyAndAlign(this._config.alignItem, this._config.width, blockSize)
     }
-    let rating = this._config.rating
-    if (rating === undefined) {
-      rating = this._config.numberOfStars
+    let rating = this._config.rating ? this._config.rating : this._config.numberOfStars
+    let ratedFill
+    let nonRatedFill
+    let ratedStroke
+    let nonRatedStroke
+    if (this._config.orientation === 'l2r' || this._config.orientation === 't2b') {
+      [ratedFill, nonRatedFill] = [this._config.ratedFill, this._config.nonRatedFill];
+      [ratedStroke, nonRatedStroke] = [this._config.ratedStroke, this._config.nonRatedStroke]
+    } else {
+      rating = this._config.numberOfStars - rating;
+      [ratedFill, nonRatedFill] = [this._config.nonRatedFill, this._config.ratedFill];
+      [ratedStroke, nonRatedStroke] = [this._config.nonRatedStroke, this._config.ratedStroke]
     }
     if (Number.parseInt(rating) !== rating) {
-      let n = (rating - Number.parseInt(rating)) * 100 + '%'
-      document.getElementById('rated-fill').setAttribute('offset', n)
-      document.getElementById('non-rated-fill').setAttribute('offset', n)
-      document.getElementById('rated-stroke').setAttribute('offset', n)
-      document.getElementById('non-rated-stroke').setAttribute('offset', n)
-      if (this._config.orientation === 'l2r' || this._config.orientation === 't2b') {
-        document.getElementById('rated-fill').setAttribute('stop-color', this._config.ratedFill)
-        document.getElementById('non-rated-fill').setAttribute('stop-color', this._config.nonRatedFill)
-        document.getElementById('rated-stroke').setAttribute('stop-color', this._config.ratedStroke)
-        document.getElementById('non-rated-stroke').setAttribute('stop-color', this._config.nonRatedStroke)
-      } else {
-        document.getElementById('rated-fill').setAttribute('stop-color', this._config.nonRatedFill)
-        document.getElementById('non-rated-fill').setAttribute('stop-color', this._config.ratedFill)
-        document.getElementById('rated-stroke').setAttribute('stop-color', this._config.nonRatedStroke)
-        document.getElementById('non-rated-stroke').setAttribute('stop-color', this._config.ratedStroke)
-      }
+      this._createOrUpdateGradient(ratedFill, nonRatedFill, ratedStroke, nonRatedStroke)
     }
-    for (let i = 0; i < this._config.stars.length; i++) {
-      let offset
-      if (this._config.justifyContent !== 'space-evenly') {
-        offset = justifyOffset + blockSize * i + this._config.strokeWidth
+    let n = this._config.numberOfStars > this._svg.stars.length ? this._config.numberOfStars : this._svg.stars.length
+    let currentNumberOfStars = this._svg.stars.length
+    let offset
+    let args = {
+      'stroke-width': this._config.strokeWidth
+    }
+    for (let i = 0; i < n; i++) {
+      if (i > this._config.numberOfStars) {
+        this._svg.stars.pop().element.remove()
       } else {
-        offset = (2 * i + 1) * justifyOffset + i * blockSize + this._config.strokeWidth
+        if (i >= currentNumberOfStars) {
+          let path = createDOMNode('path')
+          this._svg.element.appendChild(path)
+          this._svg.stars.push({
+            element: path,
+            'd': undefined,
+            'fill': undefined,
+            'stroke': undefined,
+            'stroke-width': undefined
+          })
+        }
+        if (this._config.justifyContent !== 'space-evenly') {
+          offset = justify + blockSize * i + this._config.strokeWidth
+        } else {
+          offset = (2 * i + 1) * justify + i * blockSize + this._config.strokeWidth
+        }
+        if (this._config.orientation === 'l2r' || this._config.orientation === 'r2l') {
+          args['d'] = this._calculateStar(offset, align, blockSize, this._config.strokeWidth, this._config.padding)
+        } else {
+          args['d'] = this._calculateStar(align, offset, blockSize, this._config.strokeWidth, this._config.padding)
+        }
+        if (rating >= 1) {
+          args['fill'] = ratedFill
+          args['stroke'] = ratedStroke
+        } else if (rating > 0 && rating < 1) {
+          args['fill'] = 'url(#' + this._svg.defs.gradientFill.url + ')'
+          args['stroke'] = 'url(#' + this._svg.defs.gradientStroke.url + ')'
+        } else {
+          args['fill'] = nonRatedFill
+          args['stroke'] = nonRatedStroke
+        }
+        this._setAttribute(this._svg.stars[i], args, true)
+        rating -= 1
       }
-      if (this._config.orientation === 'l2r' || this._config.orientation === 'r2l') {
-        this._config.stars[i].setAttribute('d',
-          this._calculateStar(offset, alignOffset, blockSize, this._config.strokeWidth, this._config.padding))
-      } else {
-        this._config.stars[i].setAttribute('d',
-          this._calculateStar(alignOffset, offset, blockSize, this._config.strokeWidth, this._config.padding))
-      }
-      let j = i
-      if (this._config.orientation === 'r2l' || this._config.orientation === 'b2t') {
-        j = this._config.stars.length - 1 - i
-      }
-      if (rating >= 1) {
-        this._config.stars[j].setAttribute('fill', this._config.ratedFill)
-        this._config.stars[j].setAttribute('stroke', this._config.ratedStroke)
-      } else if (rating > 0 && rating < 1) {
-        this._config.stars[j].setAttribute('fill', 'url(#gradient-fill)')
-        this._config.stars[j].setAttribute('stroke', 'url(#gradient-stroke)')
-      } else {
-        this._config.stars[j].setAttribute('fill', this._config.nonRatedFill)
-        this._config.stars[j].setAttribute('stroke', this._config.nonRatedStroke)
-      }
-      rating -= 1
-      this._config.stars[i].setAttribute('stroke-width', this._config.strokeWidth)
     }
     if (typeof this.onDraw === 'function') {
       this.onDraw()
+    } else if (this.onDraw) {
+      console.error('onDraw is not a function')
+    }
+  }
+  _createOrUpdateGradient (ratedFill, nonRatedFill, ratedStroke, nonRatedStroke) {
+    if (!this._svg.defs.element) {
+      this._svg.defs.element = createDOMNode('defs')
+      this._svg.defs.gradientFill.element = createDOMNode('linearGradient')
+      this._svg.defs.gradientFill.ratedStop.element = createDOMNode('stop')
+      this._svg.defs.gradientFill.nonRatedStop.element = createDOMNode('stop')
+      this._svg.defs.gradientStroke.element = createDOMNode('linearGradient')
+      this._svg.defs.gradientStroke.ratedStop.element = createDOMNode('stop')
+      this._svg.defs.gradientStroke.nonRatedStop.element = createDOMNode('stop')
+      this._svg.defs.gradientFill.element.appendChild(this._svg.defs.gradientFill.ratedStop.element)
+      this._svg.defs.gradientFill.element.appendChild(this._svg.defs.gradientFill.nonRatedStop.element)
+      this._svg.defs.gradientStroke.element.appendChild(this._svg.defs.gradientStroke.ratedStop.element)
+      this._svg.defs.gradientStroke.element.appendChild(this._svg.defs.gradientStroke.nonRatedStop.element)
+      this._svg.defs.element.appendChild(this._svg.defs.gradientFill.element)
+      this._svg.defs.element.appendChild(this._svg.defs.gradientStroke.element)
+      this._svg.element.appendChild(this._svg.defs.element)
+      this._svg.defs.defsCommonProperties.x1 = '0%'
+      this._svg.defs.defsCommonProperties.y1 = '0%'
+      this._setAttribute(this._svg.defs.gradientFill.element, {
+        'x1': this._svg.defs.defsCommonProperties.x1,
+        'y1': this._svg.defs.defsCommonProperties.y1,
+        'id': this._svg.defs.gradientFill.url
+      })
+      this._setAttribute(this._svg.defs.gradientStroke.element, {
+        'x1': this._svg.defs.defsCommonProperties.x1,
+        'y1': this._svg.defs.defsCommonProperties.y1,
+        'id': this._svg.defs.gradientStroke.url
+      })
+    }
+    let orientation = (this._config.orientation === 'r2l' || this._config.orientation === 'l2r') ? 'row' : 'column'
+    if (this._svg.defs.defsCommonProperties.orientation !== orientation) {
+      this._svg.defs.defsCommonProperties.orientation = orientation
+      this._svg.defs.defsCommonProperties.x2 = (orientation === 'row') ? '100%' : '0%'
+      this._svg.defs.defsCommonProperties.y2 = (orientation === 'row') ? '0%' : '100%'
+      this._setAttribute(this._svg.defs.gradientFill.element, {
+        'x2': this._svg.defs.defsCommonProperties.x2,
+        'y2': this._svg.defs.defsCommonProperties.y2
+      })
+      this._setAttribute(this._svg.defs.gradientStroke.element, {
+        'x2': this._svg.defs.defsCommonProperties.x2,
+        'y2': this._svg.defs.defsCommonProperties.y2
+      })
+    }
+    let n = this._config.rating - Math.trunc(this._config.rating)
+    n = ((this._config.orientation === 'l2r' || this._config.orientation === 't2b') ? n : 1 - n) * 100 + '%'
+    if (this._svg.defs.defsCommonProperties.stopOffset !== n) {
+      this._svg.defs.defsCommonProperties.stopOffset = n
+      this._setAttribute(this._svg.defs.gradientFill.ratedStop.element, { 'offset': n })
+      this._setAttribute(this._svg.defs.gradientFill.nonRatedStop.element, { 'offset': n })
+      this._setAttribute(this._svg.defs.gradientStroke.ratedStop.element, { 'offset': n })
+      this._setAttribute(this._svg.defs.gradientStroke.nonRatedStop.element, { 'offset': n })
+    }
+    this._setAttribute(this._svg.defs.gradientFill.ratedStop, {
+      'stop-color': ratedFill
+    }, true)
+    this._setAttribute(this._svg.defs.gradientFill.nonRatedStop, {
+      'stop-color': nonRatedFill
+    }, true)
+    this._setAttribute(this._svg.defs.gradientStroke.ratedStop, {
+      'stop-color': ratedStroke
+    }, true)
+    this._setAttribute(this._svg.defs.gradientStroke.nonRatedStop, {
+      'stop-color': nonRatedStroke
+    }, true)
+  }
+  _calculateJustifyAndAlign (alignment, side, blockSize, numberOfStars = 1) {
+    if (alignment === 'start') {
+      return 0
+    } else if (alignment === 'end') {
+      return side - blockSize * numberOfStars
+    } else if (alignment === 'center') {
+      return (side - blockSize * numberOfStars) / 2
+    } else if (alignment === 'space-evenly') {
+      return (side - blockSize * numberOfStars) / (2 * numberOfStars)
+    }
+  }
+  _setAttribute (node, attrs = {}, willCheck = false) {
+    for (let property in attrs) {
+      if (willCheck) {
+        if (node[property] !== attrs[property]) {
+          node[property] = attrs[property]
+          node.element.setAttribute(property, attrs[property])
+        }
+      } else {
+        node.setAttribute(property, attrs[property])
+      }
     }
   }
   _calculateStar (offsetWidth, offsetHeight, blockSize, strokeWidth, padding) {
@@ -394,4 +398,19 @@ export default class RatingChart {
       'Z'
     return d
   }
+}
+function checkColorCode (str) {
+  if (str.startsWith('#') && !(/(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)|(^#[0-9a-f]{6}$)|(^#[0-9a-f]{3}$) /i.test(str))) {
+    return false
+  } else if (str.startsWith('rgb') && !(/^rgb\((\d{1,3}),(\d{1,3}),(\d{1,3})\)/i.test(str))) {
+    return false
+  }
+  return true
+}
+function extractNumericalValue (val) {
+  return +val.replace(/(px)$/g, '')
+}
+function createDOMNode (nodeName) {
+  const xlmnsSvg = 'http://www.w3.org/2000/svg'
+  return document.createElementNS(xlmnsSvg, nodeName)
 }
