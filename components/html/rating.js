@@ -208,6 +208,11 @@ export default class RatingChart {
     return true
   }
   _draw () {
+    if (typeof this.onPreDraw === 'function') {
+      this.onPreDraw()
+    } else if (this.onPreDraw) {
+      console.error('OnPreDraw should be a function')
+    }
     this._setAttribute(this._svg, {
       'width': this._config.width,
       'height': this._config.height
@@ -240,12 +245,14 @@ export default class RatingChart {
     if (Number.parseInt(rating) !== rating) {
       this._createOrUpdateGradient(ratedFill, nonRatedFill, ratedStroke, nonRatedStroke)
     }
-    let n = this._config.numberOfStars > this._svg.stars.length ? this._config.numberOfStars : this._svg.stars.length
-    let currentNumberOfStars = this._svg.stars.length
+    const n = this._config.numberOfStars > this._svg.stars.length ? this._config.numberOfStars : this._svg.stars.length
+    const currentNumberOfStars = this._svg.stars.length
     let offset
     let args = {
       'stroke-width': this._config.strokeWidth
     }
+    const radius = (blockSize - 2 * (this._config.strokeWidth + this._config.padding)) / 2
+    const relativePath = this._calculateStar(radius)
     for (let i = 0; i < n; i++) {
       if (i > this._config.numberOfStars) {
         this._svg.stars.pop().element.remove()
@@ -262,14 +269,16 @@ export default class RatingChart {
           })
         }
         if (this._config.justifyContent !== 'space-evenly') {
-          offset = justify + blockSize * i + this._config.strokeWidth
+          offset = justify + blockSize * i
         } else {
-          offset = (2 * i + 1) * justify + i * blockSize + this._config.strokeWidth
+          offset = (2 * i + 1) * justify + i * blockSize
         }
         if (this._config.orientation === 'l2r' || this._config.orientation === 'r2l') {
-          args['d'] = this._calculateStar(offset, align, blockSize, this._config.strokeWidth, this._config.padding)
+          args['d'] = 'M' + (radius + offset + this._config.strokeWidth + this._config.padding) +
+          ',' + (align + this._config.strokeWidth + this._config.padding) + ' ' + relativePath
         } else {
-          args['d'] = this._calculateStar(align, offset, blockSize, this._config.strokeWidth, this._config.padding)
+          args['d'] = 'M' + (radius + align + this._config.strokeWidth + this._config.padding) +
+          ',' + (offset + this._config.strokeWidth + this._config.padding) + ' ' + relativePath
         }
         if (rating >= 1) {
           args['fill'] = ratedFill
@@ -370,7 +379,7 @@ export default class RatingChart {
   _setAttribute (node, attrs = {}, willCheck = false) {
     for (let property in attrs) {
       if (willCheck) {
-        if (node[property] !== attrs[property]) {
+        if (property === 'd' || node[property] !== attrs[property]) {
           node[property] = attrs[property]
           node.element.setAttribute(property, attrs[property])
         }
@@ -379,23 +388,18 @@ export default class RatingChart {
       }
     }
   }
-  _calculateStar (offsetWidth, offsetHeight, blockSize, strokeWidth, padding) {
-    blockSize -= 2 * (strokeWidth + padding)
-    const cx = blockSize / 2 + offsetWidth
-    const cy = blockSize / 2 + offsetHeight
-    const offsetX = blockSize / 3
-    const offsetY = blockSize / 3
-    const d = 'M' + cx + ',' + offsetHeight + ' ' +
-      'L' + (cx + offsetX) + ',' + (offsetHeight + offsetY) + ' ' +
-      'H' + (blockSize + offsetWidth) + ' ' +
-      'L' + (cx + offsetX) + ',' + (cy + offsetY / 2) + ' ' +
-      'L' + (blockSize + offsetWidth) + ',' + (blockSize + offsetHeight) + ' ' +
-      'L' + cx + ',' + (cy + offsetY) + ' ' +
-      'L' + offsetWidth + ',' + (blockSize + offsetHeight) + ' ' +
-      'L' + (cx - offsetX) + ',' + (cy + offsetY / 2) + ' ' +
-      'L' + offsetWidth + ',' + (offsetY + offsetHeight) + ' ' +
-      'H' + (cx - offsetX) + ' ' +
-      'Z'
+  _calculateStar (radius) {
+    const distanceHorizontal = (radius * (Math.cos(Math.PI * 36 / 180))) / 2
+    const distanceVertical = radius * (Math.sin(Math.PI * 36 / 180))
+    const d = 'l' + distanceHorizontal + ',' + distanceVertical + ' ' +
+        'h' + (radius - distanceHorizontal) + ' ' +
+        'l-' + (radius - distanceHorizontal) + ',' + (radius - distanceVertical) + ' ' +
+        'l' + (radius - distanceHorizontal) + ',' + radius + ' ' +
+        'l-' + radius + ',-' + (radius / 2) + ' ' +
+        'l-' + radius + ',' + (radius / 2) + ' ' +
+        'l' + (radius - distanceHorizontal) + ',-' + radius + ' ' +
+        'l-' + (radius - distanceHorizontal) + ',-' + (radius - distanceVertical) + ' ' +
+        'h' + (radius - distanceHorizontal) + ' ' + 'z'
     return d
   }
 }

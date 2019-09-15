@@ -164,7 +164,7 @@ ratingStory.addChapter(
   ]
 )
 ratingStory.addChapter(
-  'JustifyContent and Align Item',
+  'JustifyContent and Align Item along the axis',
   story => {
     let args = {
       'width': 900,
@@ -178,6 +178,24 @@ ratingStory.addChapter(
   },
   [
     notes('justify: center => start => end => space-evenly, orientation => l2r => t2b alignItem => center => end => start')
+  ]
+)
+ratingStory.addChapter(
+  'JustifyContent and Align Item opposite the axis',
+  story => {
+    let args = {
+      'width': 100,
+      'height': 900,
+      'orientation': 't2b',
+      'alignItem': 'center'
+    }
+    let a = new RatingChart(story, args)
+    setTimeout(() => a.update({ 'justifyContent': 'start' }), 1000)
+    setTimeout(() => a.update({ 'justifyContent': 'end' }), 2000)
+    setTimeout(() => a.update({ 'justifyContent': 'space-evenly' }), 3000)
+  },
+  [
+    notes('justify: center => start => end => space-evenly, alignItem => center => end => start')
   ]
 )
 ratingStory.addChapter(
@@ -229,9 +247,10 @@ ratingStory.addChapter(
     }
     let a = new RatingChart(story, args)
     setTimeout(() => { a.update({ 'strokeWidth': 4 }) }, 1000)
+    setTimeout(() => { a.update({ 'orientation': 'b2t' }) }, 2000)
   },
   [
-    notes('strokeWidth => 2 => 4')
+    notes('strokeWidth => 2 => 4, orientation => l2r => b2t')
   ]
 )
 ratingStory.addChapter(
@@ -491,6 +510,40 @@ ratingStory.addChapter(
   },
   [
     notes('Testing Final Config')
+  ]
+)
+ratingStory.addChapter(
+  'Testing of number of draws in 100ms',
+  story => {
+    let rating = new RatingChart(story, {
+      'rating': 4.5,
+      'numberOfStars': 5
+    })
+    let startTime
+    let time = 0
+    let colors = ['#ff0', '#f00', '#0f0', '#000']
+    let calledDraw = 0
+    rating.onPreDraw = function () {
+      startTime = ((new Date()).getTime() * 1)
+    }
+    rating.onDraw = function () {
+      calledDraw++
+      time += ((new Date()).getTime() * 1) - startTime
+      if (calledDraw < 100) {
+        rating.update({
+          'width': 400 + ((calledDraw * 100) % 400),
+          'height': 400 + ((calledDraw * 100) % 400),
+          'rating': ((4.5 + calledDraw) % 10 + 1) % ((5 + calledDraw) % 10 + 1),
+          'numberOfStars': (5 + calledDraw) % 10 + 1,
+          'ratedFill': colors[calledDraw % 4]
+        })
+      } else {
+        console.log('Draw done ' + calledDraw + 'time(s) in ' + time + 'ms')
+      }
+    }
+  },
+  [
+    notes('Testing timee taken to call draw 100 times')
   ]
 )
 export default ratingStory
