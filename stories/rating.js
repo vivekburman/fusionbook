@@ -19,7 +19,7 @@ ratingStory.addChapter(
     new RatingChart(story)
   },
   [
-    notes('Default height = 400px, width = 400px, ratedFill = #ff0, nonRatedFill = #ddd, orientation = l2r, ratedStroke = nonRatedStroke = none')
+    notes('Default configuration')
   ]
 )
 ratingStory.addChapter(
@@ -277,7 +277,7 @@ ratingStory.addChapter(
     setTimeout(() => a.update({ 'numberOfStars': 3 }), 2000)
   },
   [
-    notes('numberOfStars: 7 => 9')
+    notes('numberOfStars: 7 => 9 => 3')
   ]
 )
 ratingStory.addChapter(
@@ -353,7 +353,7 @@ ratingStory.addChapter(
     setTimeout(() => a.update({ 'rating': 0.341, 'numberOfStars': 8, 'orientation': 'r2l' }), 2000)
   },
   [
-    notes('numberOfStars => 7 => 4 => 8, rating => 5.71 => 3.1 => 8')
+    notes('numberOfStars => 7 => 4 => 8, rating => 5.71 => 3.1 => 0.341')
   ]
 )
 ratingStory.addChapter(
@@ -541,6 +541,22 @@ ratingStory.addChapter(
         console.log('Draw done ' + calledDraw + 'time(s) in ' + time + 'ms')
       }
     }
+  },
+  [
+    notes('Testing timee taken to call draw 100 times')
+  ]
+)
+ratingStory.addChapter(
+  'Multiple Rating Chart',
+  story => {
+    new RatingChart(story, {
+      'rating': 4.5,
+      'numberOfStars': 5
+    })
+    new RatingChart(story, {
+      'rating': 4.5,
+      'ratedFill': 'black'
+    })
   },
   [
     notes('Testing timee taken to call draw 100 times')

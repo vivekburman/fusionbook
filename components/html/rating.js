@@ -4,6 +4,7 @@ export default class RatingChart {
       console.error('Container is not a valid DOM Element')
       return null
     }
+    this.uniqueId = ++RatingChart.ratingCounter
     this._config = {
       height: 400,
       width: 400,
@@ -37,7 +38,7 @@ export default class RatingChart {
         },
         gradientFill: {
           element: undefined,
-          url: 'gradient-fill',
+          url: 'gradient-fill' + this.uniqueId,
           ratedStop: {
             element: undefined,
             'stop-color': undefined
@@ -49,7 +50,7 @@ export default class RatingChart {
         },
         gradientStroke: {
           element: undefined,
-          url: 'gradient-stroke',
+          url: 'gradient-stroke' + this.uniqueId,
           ratedStop: {
             element: undefined,
             'stop-color': undefined
@@ -403,6 +404,7 @@ export default class RatingChart {
     return d
   }
 }
+RatingChart.ratingCounter = 0
 function checkColorCode (str) {
   if (str.startsWith('#') && !(/(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)|(^#[0-9a-f]{6}$)|(^#[0-9a-f]{3}$) /i.test(str))) {
     return false
